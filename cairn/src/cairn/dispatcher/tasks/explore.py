@@ -48,7 +48,7 @@ def run_explore_task(
 
         if task_healthcheck_enabled(config):
             LOG.info(
-                "starting container exec project=%s intent=%s worker=%s phase=explore_healthcheck timeout=%ss",
+                "starting local worker process project=%s intent=%s worker=%s phase=explore_healthcheck timeout=%ss",
                 project.project.id,
                 intent.id,
                 worker.name,

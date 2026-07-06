@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,6 +41,7 @@ class DispatcherLoop:
     def __init__(self, config_path: Path):
         self.config_path = config_path
         self.config = DispatchConfig.load(config_path)
+        self._config_mtime = self._read_config_mtime()
         self.client = CairnClient(self.config.server)
         self.container_manager = ContainerManager(self.config.container)
         self.executor = ThreadPoolExecutor(max_workers=self.config.runtime.max_workers)
@@ -53,9 +55,25 @@ class DispatcherLoop:
         self._log_state: dict[str, tuple[int, str, tuple[object, ...]]] = {}
         self._cleanup_pending: set[str] = set()
         self._inactive_cleanup_done: dict[str, str] = {}
+        self._reload_requested = threading.Event()
         self.project_cursor = 0
         self._settings_checked = False
         self._startup_healthchecks_checked = False
+
+    def request_reload(self) -> None:
+        self._reload_requested.set()
+
+    def _read_config_mtime(self) -> float | None:
+        try:
+            return self.config_path.stat().st_mtime_ns
+        except OSError:
+            return None
+
+    def _config_changed(self) -> bool:
+        current = self._read_config_mtime()
+        if current is None:
+            return False
+        return current != self._config_mtime
 
     def close(self) -> None:
         if self.futures:
@@ -69,7 +87,8 @@ class DispatcherLoop:
         self.container_manager.close()
         self.client.close()
 
-    def run(self, once: bool = False) -> None:
+    def run(self, once: bool = False) -> bool:
+        should_reload = False
         try:
             self.run_startup_healthchecks()
             while True:
@@ -85,6 +104,12 @@ class DispatcherLoop:
                     self._cancel_inactive_tasks(summaries)
                     self._queue_container_cleanups(summaries)
                     self._dispatch_available(summaries)
+                    if (
+                        self._reload_requested.is_set()
+                        or self._config_changed()
+                    ) and not self.futures and not self.cleanup_futures and not self._cleanup_pending:
+                        should_reload = True
+                        break
                 except requests.RequestException as exc:
                     if once:
                         raise
@@ -100,6 +125,7 @@ class DispatcherLoop:
                 time.sleep(self.config.runtime.interval)
         finally:
             self.close()
+        return should_reload
 
     def run_startup_healthchecks_only(self) -> None:
         try:

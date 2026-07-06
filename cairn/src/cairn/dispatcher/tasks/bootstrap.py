@@ -51,7 +51,7 @@ def run_bootstrap_task(
 
         if task_healthcheck_enabled(config):
             LOG.info(
-                "starting container exec project=%s intent=%s worker=%s phase=bootstrap_healthcheck timeout=%ss",
+                "starting local worker process project=%s intent=%s worker=%s phase=bootstrap_healthcheck timeout=%ss",
                 project.project.id,
                 intent.id,
                 worker.name,

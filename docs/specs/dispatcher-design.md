@@ -869,30 +869,16 @@ codex exec resume "{session}" --dangerously-bypass-approvals-and-sandbox --model
 | 字段 | 必填 | 含义 |
 | --- | --- | --- |
 | `runtime.max_workers` | 是 | Dispatcher 同时运行中的任务总数上限 |
-| `runtime.max_running_projects` | 是 | 当前 dispatcher 运行期内已接手且仍为 `active` 的项目上限，不受历史遗留容器影响 |
+| `runtime.max_running_projects` | 是 | 当前 dispatcher 运行期内已接手且仍为 `active` 的项目上限 |
 | `runtime.max_project_workers` | 是 | 单个项目内同时运行的任务上限，统一计入 `bootstrap`、`reason` 和 `explore` |
 | `runtime.interval` | 是 | 统一节拍配置；既是 Dispatcher 主循环间隔，也是带 claim 任务的 heartbeat 周期 |
 | `runtime.healthcheck_timeout` | 是 | Worker 健康检查的统一外层 watchdog 超时 |
 | `runtime.worker_healthcheck` | 否 | Worker 健康检查模式：`startup_and_task`、`startup_only` 或 `disabled`；默认 `startup_only` |
 | `runtime.prompt_group` | 是 | 当前使用的 prompt 组目录名 |
 
-### `container.*`
+### Local runtime
 
-| 字段 | 必填 | 含义 |
-| --- | --- | --- |
-| `container.image` | 是 | 项目容器镜像 |
-| `container.network_mode` | 是 | 项目容器网络模式 |
-| `container.completed_action` | 是 | 项目 completed 后对容器的处理方式 |
-
-`container.completed_action` 可选值：
-
-- `remove`：项目 completed 后删除容器
-- `stop`：项目 completed 后只停止容器，保留现场
-
-实现约定：
-
-- completed project 的容器 cleanup 可以异步并行进行，不要求阻塞主调度循环
-- 如果项目已从 Server 删除，Dispatcher 会把找不到对应项目的 `cairn-dispatch-*` 容器视为 orphan，并执行 stop 清理
+Dispatcher runs worker commands directly on the host as local subprocesses. There is no container runtime configuration.
 
 ### `tasks.*`
 

@@ -20,14 +20,6 @@ tasks:
     timeout: 9
     conclude_timeout: 5
 
-container:
-  image: "ghcr.io/oritera/cairn-worker-container:latest"
-  network_mode: "host"
-  completed_action: "stop"
-  cap_add:
-    - "NET_RAW"
-    - "NET_ADMIN"
-
 common_env:
   TSEC_BASE_URL: "http://<SERVER_HOST>/api"
   TSEC_AGENT_TOKEN: "common-agent-token"

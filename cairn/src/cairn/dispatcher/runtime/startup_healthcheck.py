@@ -70,7 +70,7 @@ def run_startup_healthchecks(
                     )
                 results.append(result)
     finally:
-        LOG.debug("removing startup healthcheck container container=%s", container_name)
+        LOG.debug("releasing startup healthcheck runtime runtime=%s", container_name)
         container_manager.remove_container(container_name, force=True)
 
     results.sort(key=lambda result: result.worker_name)

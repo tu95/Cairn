@@ -86,12 +86,12 @@ System architecture:
                             │
           ┌─────────────────┴────────────────┐
           │             Dispatcher           │
-          │   Schedules tasks, manages       │
-          │   containers, writes protocol    │
+          │   Schedules tasks, launches      │
+          │   local agents, writes protocol  │
           └──────────┬───────────────┬───────┘
                      │               │
      ┌───────────────┴──┐     ┌──────┴──────────────┐
-     │  Worker Container│     │  Worker Container   │
+     │  Local Workers   │     │  Local Workers      │
      │   (Project A)    │     │   (Project B)       │
      │  ┌────┐  ┌────┐  │     │  ┌────┐  ┌────┐     │
      │  │ W. │  │ W. │  │     │  │ W. │  │ W. │     │
@@ -101,9 +101,9 @@ System architecture:
 
 **Cairn Server** maintains graph consistency only.
 
-**Cairn Dispatcher** reads the graph, schedules tasks, spins up and tears down worker containers, and is the sole writer to the protocol. Each project gets its own Worker Container; multiple Agent Workers run concurrently inside it. Agent Workers only receive a prompt and return structured output.
+**Cairn Dispatcher** reads the graph, schedules tasks, launches local agent commands, and is the sole writer to the protocol. Multiple Agent Workers can run concurrently on the host. Agent Workers only receive a prompt and return structured output.
 
-Supported worker backends: **Claude Code**, **Codex**, and **Pi**.
+Supported worker backends: **Codex** and **Pi**. The dispatcher still has a Claude Code driver for compatibility, but the default configuration is Codex-first.
 
 ## Results
 
@@ -129,38 +129,36 @@ Supported worker backends: **Claude Code**, **Codex**, and **Pi**.
  
 - macOS or Linux
 - Python ≥ 3.12
-- Docker
+- `uv`
+- At least one local worker CLI on `PATH`: `claude` for Claude Code or `codex` for Codex
 
 
-### Pull required images
- 
-Both setup methods require the worker container image:
- 
-```bash
-docker pull --platform=linux/amd64 ghcr.io/oritera/cairn-worker-container:latest
-```
-
-Create your local dispatcher configuration and fill in your LLM endpoints and API keys:
+Create your local dispatcher configuration:
 
 ```bash
 cp dispatch.example.yaml dispatch.yaml
 ```
+
+Worker commands run directly on this machine. There is no Docker daemon, Docker socket, or worker image in the local runtime.
+For Codex, the default worker mode uses the already authenticated local `codex` CLI, so no API key is required after `codex login`. API-key mode remains available from the Web UI if you want to point Codex at a custom endpoint.
  
-### Docker Compose (recommended)
- 
-Pull the base image used to build Cairn:
- 
-```bash
-docker pull ghcr.io/astral-sh/uv:python3.13-trixie
-```
+### Local launcher (recommended)
  
 ```bash
-docker compose up --build
+uv run --project cairn cairn launch --config dispatch.yaml
 ```
  
-This starts `cairn-server` on port `8000` and `cairn-dispatcher` once the server passes its health check. The dispatcher mounts `dispatch.yaml` from the project root and connects to Docker via the host socket. Data is persisted to `./datas/cairn/`.
+This starts the Web/API server on `0.0.0.0:8000`, waits for it to become healthy, then starts the dispatcher in the same process. Open it from this machine at `http://127.0.0.1:8000` or from another device using this machine's LAN/Tailscale IP, for example `http://100.103.239.9:8000/`. The dispatcher invokes your local `claude` or `codex` CLI according to `dispatch.yaml`.
+
+Storage locations used at runtime:
+- Worker config: `dispatch.yaml` (and model catalog: `dispatch.models.yaml` next to it).
+- SQLite DB: `~/.local/share/cairn/cairn.db`.
+- Prompt snapshots referenced by workers: `/tmp/cairn-prompts/<phase>-<random>/graph.yaml` (override with `CAIRN_GRAPH_SNAPSHOT_ROOT` env var).
+
+The Web UI can edit worker API settings, and runtime config changes are hot-reloaded: the dispatcher reloads after current tasks finish when config is updated.
+Model names are now managed from the same UI (save/delete/set default), persisted in `dispatch.models.yaml` next to `dispatch.yaml` by default.
  
-### Manual
+### Manual split-process mode
  
 ```bash
 # Start the server
@@ -175,7 +173,7 @@ uv run --project cairn cairn dispatch --config dispatch.yaml --startup-healthche
 
 ### Tests
 
-Run the fast regression suite without Docker or live model endpoints:
+Run the fast regression suite without live model endpoints:
 
 ```bash
 uv run --project cairn --group dev pytest

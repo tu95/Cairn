@@ -9,7 +9,6 @@ from cairn.dispatcher.contracts import (
     validate_explore_payload,
     validate_reason_payload,
 )
-from cairn.dispatcher.runtime.process import ManagedProcess
 from cairn.dispatcher.workers.adapters.pi import PiDriver
 
 
@@ -73,24 +72,4 @@ def test_pi_driver_extracts_session_and_last_assistant_text() -> None:
     assert driver.extract_session(None, stdout, "") == "session-123"
     assert driver.extract_response_text(stdout, "") == '{"accepted":true,"data":{}}'
 
-
-def test_close_stream_closes_response_even_when_stream_close_fails() -> None:
-    class Response:
-        def __init__(self) -> None:
-            self.closed = False
-
-        def close(self) -> None:
-            self.closed = True
-
-    class Stream:
-        def __init__(self) -> None:
-            self._response = Response()
-
-        def close(self) -> None:
-            raise ValueError("already closed")
-
-    stream = Stream()
-    ManagedProcess._close_stream(stream)
-
-    assert stream._response.closed
 

@@ -34,6 +34,22 @@ def test_dispatch_config_defaults_worker_healthcheck_and_rejects_unknown_mode() 
         DispatchConfig.model_validate(payload)
 
 
+def test_dispatch_config_allows_omitted_local_runtime_block() -> None:
+    payload = make_config().model_dump()
+    payload.pop("container")
+
+    config = DispatchConfig.model_validate(payload)
+
+    assert config.container is not None
+
+
+def test_dispatch_config_ignores_legacy_runtime_fields() -> None:
+    payload = make_config().model_dump()
+    payload["container"] = {"image": "old", "mode": "legacy", "network_mode": "host"}
+
+    assert DispatchConfig.model_validate(payload).container is not None
+
+
 def test_dispatch_config_rejects_duplicate_workers_and_excess_project_parallelism() -> None:
     payload = make_config().model_dump()
     payload["workers"].append(dict(payload["workers"][0]))
@@ -132,4 +148,30 @@ def test_codex_driver_execute_argv_passes_model_endpoint_and_prompt() -> None:
     assert "--model" in argv
     assert "gpt-test" in argv
     assert 'model_providers.cairn.base_url="http://api/v1"' in argv
+    assert argv.count('model_reasoning_effort="high"') == 1
+    assert argv[-2:] == ["--", "prompt"]
+
+
+def test_codex_local_auth_uses_local_cli_without_api_key() -> None:
+    worker = WorkerConfig.model_validate(
+        {
+            "name": "codex",
+            "type": "codex",
+            "task_types": ["reason"],
+            "max_running": 1,
+            "priority": 0,
+            "env": {
+                "CODEX_AUTH_MODE": "local",
+            },
+        }
+    )
+
+    driver = CodexDriver()
+    argv = driver.build_execute(worker, "prompt", None).argv
+
+    assert driver.build_healthcheck(worker) == ["codex", "--version"]
+    assert driver.describe_startup_healthcheck(worker) == "codex --version"
+    assert "--model" not in argv
+    assert 'model_provider="cairn"' not in argv
+    assert not any("model_providers.cairn.base_url" in item for item in argv)
     assert argv[-2:] == ["--", "prompt"]

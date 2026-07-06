@@ -50,7 +50,7 @@ def run_reason_task(
 
         if task_healthcheck_enabled(config):
             LOG.info(
-                "starting container exec project=%s worker=%s phase=reason_healthcheck timeout=%ss",
+                "starting local worker process project=%s worker=%s phase=reason_healthcheck timeout=%ss",
                 project.project.id,
                 worker.name,
                 healthcheck_timeout,

@@ -265,6 +265,10 @@
       </button>
     </div>
     <div class="flex items-center gap-1.5">
+      <button @click="openWorkerConfig()" class="h-7 px-2.5 rounded-lg border border-emerald-200 text-xs text-emerald-600 hover:bg-emerald-50 transition inline-flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/><path d="m14.5 4-5 16"/></svg>
+        Workers
+      </button>
       <button @click="showNewProject = true" class="h-7 px-2.5 rounded-lg border border-brand-200 text-xs text-brand-600 hover:bg-brand-50 transition inline-flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
         New Project
@@ -419,6 +423,10 @@
       <span x-text="`${project.intents.length} intents`"></span>
     </div>
     <div class="flex items-center gap-1.5">
+      <button @click="openWorkerConfig()" class="px-2.5 py-1 rounded-lg border border-emerald-200 text-xs text-emerald-600 hover:bg-emerald-50 transition flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/><path d="m14.5 4-5 16"/></svg>
+        Workers
+      </button>
       <template x-if="!replay.active">
         <button @click="startProjectReplay()" class="px-2.5 py-1 rounded-lg border border-violet-200 text-xs text-violet-600 hover:bg-violet-50 transition flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/><path d="M4 5v14"/></svg>
@@ -985,6 +993,139 @@
   </div>
 </div>
 
+<!-- Worker Config -->
+<div x-show="showCodexConfig" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showCodexConfig = false">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-slate-200/60" @click.stop>
+    <div class="flex items-start gap-3 mb-4">
+      <div class="h-10 w-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/><path d="m14.5 4-5 16"/></svg>
+      </div>
+      <div class="min-w-0">
+        <h3 class="text-base font-semibold text-slate-700">Worker API Settings</h3>
+        <p class="text-xs text-slate-400 mt-1">Save writes dispatch config. If the dispatcher is running, it reloads after current tasks finish.</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Provider</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer flex items-center justify-center gap-2"
+            :class="workerConfig.provider === 'codex' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            <input type="radio" value="codex" x-model="workerConfig.provider" @change="applyWorkerProviderDefaults()" class="sr-only">
+            <span>Codex</span>
+          </label>
+          <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer flex items-center justify-center gap-2"
+            :class="workerConfig.provider === 'claudecode' ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            <input type="radio" value="claudecode" x-model="workerConfig.provider" @change="applyWorkerProviderDefaults()" class="sr-only">
+            <span>Claude Code</span>
+          </label>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-400">
+          Selected: <span class="font-mono text-slate-600" x-text="workerConfig.provider === 'claudecode' ? 'claudecode' : 'codex'"></span>
+        </p>
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Max running</label>
+        <input type="number" min="1" max="16" x-model.number="workerConfig.max_running" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition">
+      </div>
+      <div class="md:col-span-2" x-show="workerConfig.provider === 'codex'" x-cloak>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Authentication</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer"
+            :class="workerConfig.auth_mode === 'local' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            <input type="radio" value="local" x-model="workerConfig.auth_mode" @change="applyWorkerAuthDefaults()" class="sr-only">
+            <span class="block">Local login</span>
+            <span class="block text-[11px] font-normal opacity-70 mt-0.5">Use this machine's Codex session</span>
+          </label>
+          <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer"
+            :class="workerConfig.auth_mode === 'api_key' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            <input type="radio" value="api_key" x-model="workerConfig.auth_mode" @change="applyWorkerAuthDefaults()" class="sr-only">
+            <span class="block">API key</span>
+            <span class="block text-[11px] font-normal opacity-70 mt-0.5">Use a custom OpenAI endpoint</span>
+          </label>
+        </div>
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium" x-text="codexUsesLocalAuth() ? 'Model (optional)' : 'Model'"></label>
+        <div class="flex gap-2">
+          <input
+            x-model="workerConfig.model"
+            :placeholder="(workerConfig.default_model || 'gpt-5.1-codex') + (codexUsesLocalAuth() ? ' (optional)' : '')"
+            list="worker-model-options"
+            class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition placeholder:text-slate-300"
+          >
+          <datalist id="worker-model-options">
+            <template x-for="item in workerConfig.available_models" :key="item">
+              <option :value="item"></option>
+            </template>
+          </datalist>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-400">
+          Default: <span x-text="workerConfig.default_model || '—'"></span>
+        </p>
+      </div>
+      <div class="md:col-span-2">
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Saved models</label>
+        <div class="rounded-xl border border-slate-200 bg-slate-50">
+          <template x-if="workerModelCatalogForCurrentProvider().items.length === 0">
+            <p class="text-xs text-slate-400 px-3 py-2">No models yet.</p>
+          </template>
+          <template x-for="model in workerModelCatalogForCurrentProvider().items" :key="model">
+            <div class="grid grid-cols-3 gap-2 border-t border-slate-200 px-3 py-2">
+              <span class="col-span-2 text-sm text-slate-700 truncate" x-text="model"></span>
+              <span class="flex items-center justify-end gap-2">
+                <button
+                  @click="setWorkerModelDefault(model)"
+                  :disabled="workerModelCatalogForCurrentProvider().default === model"
+                  class="text-xs px-2 py-1 rounded-lg border border-emerald-100 bg-white text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span x-text="workerModelCatalogForCurrentProvider().default === model ? 'Default' : 'Set default'"></span>
+                </button>
+                <button
+                  @click="removeWorkerModel(model)"
+                  class="text-xs px-2 py-1 rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 transition"
+                >Delete</button>
+              </span>
+            </div>
+          </template>
+          <div class="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 border-t border-slate-200">
+            <input x-model="workerModelInput" @keydown.enter.prevent="addWorkerModel()" placeholder="Add model name" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition placeholder:text-slate-300">
+            <button @click="addWorkerModel()" class="px-3 py-2 text-xs rounded-lg border border-emerald-100 bg-emerald-600 text-white hover:bg-emerald-700 transition">Add</button>
+          </div>
+        </div>
+      </div>
+      <div x-show="workerNeedsApiCredentials()" x-cloak>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Base URL</label>
+        <input x-model="workerConfig.base_url" :placeholder="workerConfig.provider === 'claudecode' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition placeholder:text-slate-300">
+      </div>
+      <div class="md:col-span-2" x-show="workerNeedsApiCredentials()" x-cloak>
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium" x-text="workerConfig.provider === 'claudecode' ? 'ANTHROPIC_AUTH_TOKEN' : 'OPENAI_API_KEY'"></label>
+        <input type="password" x-model="workerConfig.api_key" placeholder="sk-..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition placeholder:text-slate-300">
+        <p class="text-[11px] text-slate-400 mt-1">Leave the masked value unchanged to keep the existing secret.</p>
+      </div>
+    </div>
+    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h4 class="text-sm font-semibold text-slate-700">Ping test</h4>
+          <p class="text-xs text-slate-400 mt-1" x-text="codexUsesLocalAuth() ? 'Checks the local codex CLI on this machine.' : 'Sends a minimal request to the selected provider API.'"></p>
+        </div>
+        <button @click="pingWorkerConfig()" :disabled="isPingingWorkerConfig" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition disabled:opacity-40">
+          <span x-text="isPingingWorkerConfig ? 'Pinging...' : 'Send Ping'"></span>
+        </button>
+      </div>
+      <pre x-show="workerPingResult" class="mt-3 max-h-32 overflow-auto rounded-xl border border-slate-200 bg-white p-3 text-[11px] leading-5 text-slate-700"><code x-text="workerPingResult"></code></pre>
+    </div>
+    <div class="flex justify-end gap-2 mt-5">
+      <button @click="showCodexConfig = false" class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl transition">Close</button>
+      <button @click="saveWorkerConfig()" :disabled="isSavingWorkerConfig || !canSaveWorkerConfig()"
+        class="px-4 py-2 text-sm bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition shadow-sm shadow-emerald-200 disabled:opacity-40">
+        <span x-text="isSavingWorkerConfig ? 'Saving...' : 'Save Worker'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings -->
 <div x-show="showSettings" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showSettings = false">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/60" @click.stop>
@@ -1095,6 +1236,7 @@ function cairnApp() {
     showReopenModal: false,
     showRenameModal: false,
     showLocalPrefs: false,
+    showCodexConfig: false,
     showSettings: false,
     showYamlModal: false,
     exportTab: 'yaml',
@@ -1110,6 +1252,26 @@ function cairnApp() {
     renameForm: { projectId: '', originalTitle: '', title: '' },
     localPrefs: { actor_name: 'Human', layout_mode: 'dagre_tb' },
     settingsForm: { intent_timeout: 5, reason_timeout: 5 },
+    workerConfig: {
+      provider: 'codex',
+      auth_mode: 'local',
+      model: '',
+      base_url: '',
+      api_key: '',
+      max_running: 1,
+      config_path: 'dispatch.yaml',
+      restart_required: false,
+      available_models: [],
+      default_model: '',
+    },
+    workerModelCatalog: {
+      codex: { items: [], default: '' },
+      claudecode: { items: [], default: '' },
+    },
+    workerModelInput: '',
+    workerPingResult: '',
+    isSavingWorkerConfig: false,
+    isPingingWorkerConfig: false,
     deleteConfirm: { id: '', title: '' },
     isDeletingProject: false,
     yamlPreviewTitle: '',
@@ -1413,6 +1575,232 @@ function cairnApp() {
       } catch {
         this.showToast('Copy failed', 'error');
       }
+    },
+
+    async openWorkerConfig() {
+      this.showCodexConfig = true;
+      this.workerPingResult = '';
+      try {
+        this.workerConfig = await this.api('GET', '/worker-config');
+        await this.loadWorkerModels(this.workerConfig.provider);
+      } catch(e) {
+        this.showToast(e.message, 'error');
+      }
+    },
+
+    applyWorkerProviderDefaults() {
+      this.workerPingResult = '';
+      if (this.workerConfig.provider === 'claudecode') {
+        this.workerConfig.auth_mode = 'api_key';
+        if (!this.workerConfig.model || this.workerConfig.model.startsWith('gpt-')) {
+          this.workerConfig.model = 'claude-sonnet-4-5';
+        }
+        if (!this.workerConfig.base_url || this.workerConfig.base_url.includes('openai.com')) {
+          this.workerConfig.base_url = 'https://api.anthropic.com';
+        }
+      } else {
+        this.workerConfig.auth_mode = this.workerConfig.auth_mode || 'local';
+        if (!this.workerConfig.model || this.workerConfig.model.startsWith('claude-')) {
+          this.workerConfig.model = this.workerConfig.auth_mode === 'api_key' ? 'gpt-5.1-codex' : '';
+        }
+        if (!this.workerConfig.model && this.workerConfig.default_model) {
+          this.workerConfig.model = this.workerConfig.default_model;
+        }
+        if (this.workerConfig.auth_mode === 'api_key' && (!this.workerConfig.base_url || this.workerConfig.base_url.includes('anthropic.com'))) {
+          this.workerConfig.base_url = 'https://api.openai.com/v1';
+        }
+      }
+      this.loadWorkerModels(this.workerConfig.provider);
+    },
+
+    applyWorkerAuthDefaults() {
+      this.workerPingResult = '';
+      if (this.codexUsesLocalAuth()) {
+        this.workerConfig.base_url = '';
+        this.workerConfig.api_key = '';
+        if (this.workerConfig.model === 'gpt-5.1-codex') {
+          this.workerConfig.model = '';
+        }
+      } else if (this.workerConfig.provider === 'codex' && !this.workerConfig.base_url) {
+        this.workerConfig.base_url = 'https://api.openai.com/v1';
+        if (!this.workerConfig.model) {
+          this.workerConfig.model = 'gpt-5.1-codex';
+        }
+      }
+    },
+
+    codexUsesLocalAuth() {
+      return this.workerConfig.provider === 'codex' && this.workerConfig.auth_mode === 'local';
+    },
+
+    workerNeedsApiCredentials() {
+      return this.workerConfig.provider === 'claudecode' || (this.workerConfig.provider === 'codex' && this.workerConfig.auth_mode === 'api_key');
+    },
+
+    workerModelCatalogForCurrentProvider() {
+      return this.workerModelCatalog[this.workerConfig.provider] || { items: [], default: '' };
+    },
+
+    canSaveWorkerConfig() {
+      if (!this.workerNeedsApiCredentials()) return true;
+      return Boolean(this.workerConfig.model && this.workerConfig.base_url && this.workerConfig.api_key);
+    },
+
+    workerConfigPayload() {
+      return {
+        provider: this.workerConfig.provider,
+        auth_mode: this.workerConfig.auth_mode,
+        model: this.workerConfig.model,
+        base_url: this.workerConfig.base_url,
+        api_key: this.workerConfig.api_key,
+        max_running: Number(this.workerConfig.max_running) || 1,
+      };
+    },
+
+    async pingWorkerConfig() {
+      this.isPingingWorkerConfig = true;
+      this.workerPingResult = '';
+      try {
+        const result = await this.api('POST', '/worker-config/ping', this.workerConfigPayload());
+        this.workerPingResult = `${result.ok ? 'OK' : 'FAILED'}${result.status_code ? ` HTTP ${result.status_code}` : ''}\n${result.preview || ''}`.trim();
+        this.showToast(result.ok ? 'Ping succeeded' : 'Ping failed', result.ok ? 'info' : 'error');
+      } catch(e) {
+        this.workerPingResult = e.message;
+        this.showToast(e.message, 'error');
+      } finally {
+        this.isPingingWorkerConfig = false;
+      }
+    },
+
+    async saveWorkerConfig() {
+      this.isSavingWorkerConfig = true;
+      try {
+        const result = await this.api('PUT', '/worker-config', this.workerConfigPayload());
+        this.workerConfig = result;
+        this.showToast(
+          result.restart_required
+            ? 'Worker config saved. It may take a moment to apply after current tasks finish.'
+            : 'Worker config saved and applied.',
+        );
+      } catch(e) {
+        this.showToast(e.message, 'error');
+      } finally {
+        this.isSavingWorkerConfig = false;
+      }
+    },
+
+    async loadWorkerModels(provider = this.workerConfig.provider) {
+      const data = await this.api('GET', `/worker-models?provider=${provider}`);
+      this.workerModelCatalog[provider] = { items: data.items || [], default: data.default || '' };
+      if (provider === this.workerConfig.provider) {
+        this.workerConfig.available_models = data.items || [];
+        this.workerConfig.default_model = data.default || '';
+        if (!this.workerConfig.model && this.workerConfig.default_model) {
+          this.workerConfig.model = this.workerConfig.default_model;
+        }
+      }
+    },
+
+    async saveWorkerModels() {
+      const current = this.workerModelCatalogForCurrentProvider();
+      const data = await this.api('PUT', '/worker-models', {
+        provider: this.workerConfig.provider,
+        items: current.items,
+        default: current.default,
+      });
+      this.workerModelCatalog[this.workerConfig.provider] = { items: data.items || [], default: data.default || '' };
+      this.workerConfig.available_models = data.items || [];
+      this.workerConfig.default_model = data.default || '';
+    },
+
+    async addWorkerModel() {
+      const model = (this.workerModelInput || '').trim();
+      if (!model) {
+        this.showToast('Please input a model name', 'error');
+        return;
+      }
+      const current = this.workerModelCatalogForCurrentProvider();
+      if (current.items.includes(model)) {
+        this.showToast('Model already exists', 'error');
+        return;
+      }
+      current.items = [...current.items, model];
+      if (!current.default) {
+        current.default = model;
+      }
+      this.workerModelInput = '';
+      await this.saveWorkerModels();
+    },
+
+    async setWorkerModelDefault(model) {
+      const current = this.workerModelCatalogForCurrentProvider();
+      current.default = model;
+      await this.saveWorkerModels();
+      if (this.workerConfig.provider === 'codex' && this.workerConfig.auth_mode === 'local' && !this.workerConfig.model) {
+        this.workerConfig.model = model;
+      }
+    },
+
+    async removeWorkerModel(model) {
+      const current = this.workerModelCatalogForCurrentProvider();
+      current.items = current.items.filter((item) => item !== model);
+      if (current.default === model) {
+        current.default = current.items[0] || '';
+      }
+      if (this.workerConfig.model === model) {
+        this.workerConfig.model = current.default || '';
+      }
+      await this.saveWorkerModels();
+    },
+
+    codexApiWorkerConfig() {
+      return `- name: "codex-local"
+  type: "codex"
+  task_types: [bootstrap, reason, explore]
+  max_running: 1
+  priority: 0
+  env:
+    CODEX_MODEL: "gpt-5.1-codex"
+    CODEX_AUTH_MODE: "api_key"
+    CODEX_BASE_URL: "https://api.openai.com/v1"
+    OPENAI_API_KEY: "sk-..."`;
+    },
+
+    codexDeviceLoginCommand() {
+      return 'codex login --device-auth';
+    },
+
+    codexStatusCommand() {
+      return 'codex login status && codex doctor';
+    },
+
+    codexPingCommand() {
+      return 'codex exec -- "Reply with exactly: pong"';
+    },
+
+    async copyCommand(text, label = 'Copied') {
+      try {
+        await this.copyText(text);
+        this.showToast(label);
+      } catch {
+        this.showToast('Copy failed', 'error');
+      }
+    },
+
+    copyCodexApiWorkerConfig() {
+      return this.copyCommand(this.codexApiWorkerConfig(), 'Codex YAML copied');
+    },
+
+    copyCodexDeviceLoginCommand() {
+      return this.copyCommand(this.codexDeviceLoginCommand(), 'Login command copied');
+    },
+
+    copyCodexStatusCommand() {
+      return this.copyCommand(this.codexStatusCommand(), 'Status command copied');
+    },
+
+    copyCodexPingCommand() {
+      return this.copyCommand(this.codexPingCommand(), 'Ping command copied');
     },
 
     async copyText(text) {

@@ -9,6 +9,8 @@ class CodexDriver(RegexSessionDriver):
     type_name = "codex"
 
     def build_healthcheck(self, worker: WorkerConfig) -> list[str]:
+        if self._uses_local_auth(worker):
+            return ["codex", "--version"]
         return [
             "curl",
             "-sS",
@@ -22,6 +24,8 @@ class CodexDriver(RegexSessionDriver):
         ]
 
     def build_startup_healthcheck(self, worker: WorkerConfig) -> list[str]:
+        if self._uses_local_auth(worker):
+            return ["codex", "--version"]
         return build_verbose_curl_healthcheck(
             self._healthcheck_url(worker),
             headers=self._healthcheck_headers(worker),
@@ -29,6 +33,8 @@ class CodexDriver(RegexSessionDriver):
         )
 
     def describe_startup_healthcheck(self, worker: WorkerConfig) -> str:
+        if self._uses_local_auth(worker):
+            return "codex --version"
         return render_curl_command(
             self._healthcheck_url(worker),
             headers=[
@@ -42,55 +48,77 @@ class CodexDriver(RegexSessionDriver):
 
     def build_execute(self, worker: WorkerConfig, prompt: str, session: str | None) -> DriverResult:
         env = worker.env
-        return DriverResult(
-            argv=[
-                "codex",
-                "exec",
-                "--dangerously-bypass-approvals-and-sandbox",
-                "--model",
-                env["CODEX_MODEL"],
-                "-c",
-                'model_provider="cairn"',
-                "-c",
-                'model_providers.cairn.name="cairn"',
-                "-c",
-                'model_providers.cairn.wire_api="responses"',
+        argv = [
+            "codex",
+            "exec",
+            "--dangerously-bypass-approvals-and-sandbox",
+        ]
+        if env.get("CODEX_MODEL"):
+            argv.extend(["--model", env["CODEX_MODEL"]])
+        if not self._uses_local_auth(worker):
+            argv.extend(
+                [
+                    "-c",
+                    'model_provider="cairn"',
+                    "-c",
+                    'model_providers.cairn.name="cairn"',
+                    "-c",
+                    'model_providers.cairn.wire_api="responses"',
+                    "-c",
+                    f'model_providers.cairn.base_url="{env["CODEX_BASE_URL"]}"',
+                    "-c",
+                    'model_providers.cairn.env_key="OPENAI_API_KEY"',
+                ]
+            )
+        argv.extend(
+            [
                 "-c",
                 'model_reasoning_effort="high"',
-                "-c",
-                f'model_providers.cairn.base_url="{env["CODEX_BASE_URL"]}"',
-                "-c",
-                'model_providers.cairn.env_key="OPENAI_API_KEY"',
                 "--",
                 prompt,
             ]
         )
+        return DriverResult(argv=argv)
 
     def build_conclude(self, worker: WorkerConfig, prompt: str, session: str) -> list[str]:
         env = worker.env
-        return [
+        argv = [
             "codex",
             "exec",
             "resume",
             session,
             "--dangerously-bypass-approvals-and-sandbox",
-            "--model",
-            env["CODEX_MODEL"],
-            "-c",
-            'model_provider="cairn"',
-            "-c",
-            'model_providers.cairn.name="cairn"',
-            "-c",
-            'model_providers.cairn.wire_api="responses"',
-            "-c",
-            'model_reasoning_effort="high"',
-            "-c",
-            f'model_providers.cairn.base_url="{env["CODEX_BASE_URL"]}"',
-            "-c",
-            'model_providers.cairn.env_key="OPENAI_API_KEY"',
-            "--",
-            prompt,
         ]
+        if env.get("CODEX_MODEL"):
+            argv.extend(["--model", env["CODEX_MODEL"]])
+        if not self._uses_local_auth(worker):
+            argv.extend(
+                [
+                    "-c",
+                    'model_provider="cairn"',
+                    "-c",
+                    'model_providers.cairn.name="cairn"',
+                    "-c",
+                    'model_providers.cairn.wire_api="responses"',
+                    "-c",
+                    f'model_providers.cairn.base_url="{env["CODEX_BASE_URL"]}"',
+                    "-c",
+                    'model_providers.cairn.env_key="OPENAI_API_KEY"',
+                ]
+            )
+        argv.extend(
+            [
+                "-c",
+                'model_reasoning_effort="high"',
+                "--",
+                prompt,
+            ]
+        )
+        return argv
+
+    @staticmethod
+    def _uses_local_auth(worker: WorkerConfig) -> bool:
+        return worker.env.get("CODEX_AUTH_MODE") == "local"
 
     @staticmethod
     def _healthcheck_url(worker: WorkerConfig) -> str:

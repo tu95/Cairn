@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+import os
 import uuid
 from dataclasses import dataclass
 
@@ -15,7 +16,7 @@ from cairn.dispatcher.runtime.process import ProcessResult
 HEALTHCHECK_COMMUNICATE_GRACE_SECONDS = 10
 PROCESS_COMMUNICATE_GRACE_SECONDS = 15
 LOG_PREVIEW_LIMIT = 1200
-GRAPH_SNAPSHOT_ROOT = "/tmp/cairn-prompts"
+GRAPH_SNAPSHOT_ROOT = os.environ.get("CAIRN_GRAPH_SNAPSHOT_ROOT", "/tmp/cairn-prompts")
 LOG = logging.getLogger(__name__)
 
 
@@ -67,8 +68,10 @@ def write_graph_snapshot_reference(
 ) -> str:
     path = f"{GRAPH_SNAPSHOT_ROOT}/{phase}-{uuid.uuid4().hex[:12]}/graph.yaml"
     container_manager.write_text_file(container_name, path, graph_yaml)
+    mode = getattr(container_manager, "mode", "host")
+    location = "the host machine" if mode == "host" else "the current container"
     return (
-        "The graph YAML snapshot is stored in this file inside the current container:\n\n"
+        f"The graph YAML snapshot is stored in this file on {location}:\n\n"
         f"{path}\n\n"
         "Before using the graph, read the entire file and treat its contents as the YAML snapshot "
         "for this Graph section."
@@ -120,7 +123,7 @@ def run_worker_process(
     cancellation: TaskCancellation | None = None,
 ) -> ProcessResult:
     LOG.info(
-        "starting container exec container=%s worker=%s phase=%s timeout=%ss",
+        "starting worker process runtime=%s worker=%s phase=%s timeout=%ss",
         container_name,
         worker.name,
         phase,

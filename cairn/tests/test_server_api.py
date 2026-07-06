@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 import pytest
+import yaml
 
 from cairn.server import db
 from cairn.server.app import app
+from cairn.server.routers import worker_config
 
 
 @pytest.fixture
@@ -28,6 +32,123 @@ def _create_project(client: TestClient) -> str:
     assert response.status_code == 201
     assert response.json()["project"]["bootstrap_enabled"] is True
     return response.json()["project"]["id"]
+
+
+def test_worker_config_writes_codex_local_auth_without_api_key(
+    client: TestClient, tmp_path, monkeypatch
+) -> None:
+    config_path = tmp_path / "dispatch.yaml"
+    monkeypatch.setattr(worker_config, "CONFIG_PATH", config_path)
+
+    response = client.put(
+        "/worker-config",
+        json={
+            "provider": "codex",
+            "auth_mode": "local",
+            "model": "",
+            "base_url": "",
+            "api_key": "",
+            "max_running": 2,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["auth_mode"] == "local"
+    assert data["api_key"] == ""
+
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    env = config["workers"][0]["env"]
+    assert env == {"CODEX_AUTH_MODE": "local"}
+    assert config["workers"][0]["max_running"] == 2
+
+
+def test_worker_config_pings_codex_local_auth(client: TestClient, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(worker_config, "CONFIG_PATH", tmp_path / "dispatch.yaml")
+
+    def fake_run(*args, **kwargs):
+        assert args[0] == [
+            "codex",
+            "exec",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--",
+            "Reply with exactly: pong",
+        ]
+        return SimpleNamespace(returncode=0, stdout="pong\n", stderr="")
+
+    monkeypatch.setattr(worker_config.subprocess, "run", fake_run)
+
+    response = client.post(
+        "/worker-config/ping",
+        json={
+            "provider": "codex",
+            "auth_mode": "local",
+            "model": "",
+            "base_url": "",
+            "api_key": "",
+            "max_running": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "status_code": 0, "preview": "pong\n"}
+
+
+def test_worker_models_support_add_remove_and_default(client: TestClient, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(worker_config, "CONFIG_PATH", tmp_path / "dispatch.yaml")
+
+    response = client.get("/worker-models?provider=codex")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["provider"] == "codex"
+    assert payload["items"]
+    assert payload["default"] == payload["items"][0]
+
+    response = client.put(
+        "/worker-models",
+        json={"provider": "codex", "items": ["gpt-5.1-codex", "gpt-5-mini"], "default": "gpt-5-mini"},
+    )
+    assert response.status_code == 200
+    assert response.json()["default"] == "gpt-5-mini"
+
+    response = client.put(
+        "/worker-models",
+        json={"provider": "codex", "items": ["gpt-5-mini"], "default": "gpt-5-mini"},
+    )
+    assert response.status_code == 200
+    assert response.json()["items"] == ["gpt-5-mini"]
+
+    response = client.get("/worker-models?provider=codex")
+    assert response.status_code == 200
+    assert response.json()["items"] == ["gpt-5-mini"]
+
+
+def test_worker_config_save_triggers_live_reload_without_restart_notice(client: TestClient, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(worker_config, "CONFIG_PATH", tmp_path / "dispatch.yaml")
+    called = {"value": False}
+
+    def mark_reload() -> None:
+        called["value"] = True
+
+    worker_config.set_dispatcher_reload_callback(mark_reload)
+    try:
+        response = client.put(
+            "/worker-config",
+            json={
+                "provider": "codex",
+                "auth_mode": "local",
+                "model": "",
+                "base_url": "",
+                "api_key": "",
+                "max_running": 2,
+            },
+        )
+    finally:
+        worker_config.set_dispatcher_reload_callback(None)
+
+    assert response.status_code == 200
+    assert response.json()["restart_required"] is False
+    assert called["value"] is True
 
 
 def test_project_workflow_create_conclude_complete_and_reopen(client: TestClient) -> None:

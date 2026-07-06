@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 TaskType = Literal["reason", "explore", "bootstrap"]
 WorkerType = Literal["claudecode", "codex", "pi", "mock"]
-CompletedAction = Literal["remove", "stop"]
 WorkerHealthcheckMode = Literal["startup_and_task", "startup_only", "disabled"]
 
 WORKER_ENV_KEYS: dict[WorkerType, tuple[str, ...]] = {
@@ -21,11 +20,7 @@ WORKER_ENV_KEYS: dict[WorkerType, tuple[str, ...]] = {
         "ANTHROPIC_BASE_URL",
         "ANTHROPIC_AUTH_TOKEN",
     ),
-    "codex": (
-        "CODEX_MODEL",
-        "CODEX_BASE_URL",
-        "OPENAI_API_KEY",
-    ),
+    "codex": (),
     "pi": (
         "PI_MODEL",
         "PI_BASE_URL",
@@ -149,10 +144,7 @@ class TasksConfig(BaseModel):
 
 
 class ContainerConfig(BaseModel):
-    image: str
-    network_mode: str
-    completed_action: CompletedAction
-    cap_add: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(extra="ignore")
 
 
 class RuntimeConfig(BaseModel):
@@ -190,6 +182,16 @@ class WorkerConfig(BaseModel):
         missing = [key for key in required if not self.env.get(key)]
         if missing:
             raise ValueError(f"worker {self.name} missing env keys: {', '.join(missing)}")
+        if self.type == "codex":
+            auth_mode = self.env.get("CODEX_AUTH_MODE", "api_key")
+            if auth_mode not in ("api_key", "local"):
+                raise ValueError(f"worker {self.name} env CODEX_AUTH_MODE must be api_key or local")
+            if auth_mode == "api_key":
+                missing = [
+                    key for key in ("CODEX_MODEL", "CODEX_BASE_URL", "OPENAI_API_KEY") if not self.env.get(key)
+                ]
+                if missing:
+                    raise ValueError(f"worker {self.name} missing env keys: {', '.join(missing)}")
         if self.type == "pi":
             _validate_optional_positive_int_env(self.name, self.env, "PI_MODEL_CONTEXT_WINDOW")
         if self.type == "mock":
@@ -203,7 +205,7 @@ class DispatchConfig(BaseModel):
     server: str
     runtime: RuntimeConfig
     tasks: TasksConfig
-    container: ContainerConfig
+    container: ContainerConfig = Field(default_factory=ContainerConfig)
     common_env: dict[str, str] = Field(default_factory=dict)
     workers: list[WorkerConfig]
 
