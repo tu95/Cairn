@@ -22,6 +22,59 @@
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
   .overlay { background: rgba(15,23,42,0.25); backdrop-filter: blur(6px); }
   .timeline-flash { animation: timelineFlash 1s ease-out; }
+  .timeline-markdown {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .timeline-markdown p {
+    margin: 0.25rem 0 0;
+  }
+  .timeline-markdown p:first-child,
+  .timeline-markdown ul:first-child,
+  .timeline-markdown ol:first-child,
+  .timeline-markdown pre:first-child {
+    margin-top: 0;
+  }
+  .timeline-markdown code {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    background: #f8fafc;
+    padding: 0.05rem 0.25rem;
+    color: #334155;
+    font-size: 0.78rem;
+  }
+  .timeline-markdown pre {
+    margin: 0.5rem 0 0;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    padding: 0.625rem 0.75rem;
+    color: #334155;
+    font-size: 0.72rem;
+    line-height: 1.55;
+  }
+  .timeline-markdown pre code {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  .timeline-markdown ul,
+  .timeline-markdown ol {
+    margin: 0.35rem 0 0;
+    padding-left: 1.1rem;
+  }
+  .timeline-markdown li {
+    margin-top: 0.15rem;
+  }
+  .timeline-markdown a {
+    color: #0f766e;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
   .reason-chip-running { animation: reasonChipGlow 1.8s ease-in-out infinite; }
   .intent-chip-running { animation: intentChipGlow 1.8s ease-in-out infinite; }
   .reason-panel-running::before {
@@ -775,8 +828,8 @@
               <div class="w-2.5 h-2.5 rounded-full mt-1.5" :class="timelineEventDotClass(entry)"></div>
               <div class="w-px flex-1 bg-slate-100 mt-2" x-show="!entry.isLast"></div>
             </div>
-            <button type="button" @click="openTimelineEntry(entry)"
-              class="min-w-0 flex-1 text-left rounded-xl px-0.5 py-0.5 transition"
+            <div role="button" tabindex="0" @click="openTimelineEntry(entry)" @keydown.enter.prevent="openTimelineEntry(entry)" @keydown.space.prevent="openTimelineEntry(entry)"
+              class="min-w-0 flex-1 text-left rounded-xl px-1.5 py-1 transition outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
               :class="timelineEntryButtonClass(entry)">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[11px] font-medium text-slate-400 tabular-nums" x-text="formatTime(entry.timestamp)"></span>
@@ -785,12 +838,12 @@
                 <span class="text-[11px] text-slate-300" x-text="formatTimelineDate(entry.timestamp)"></span>
               </div>
               <template x-if="entry.title">
-                <p class="text-sm text-slate-700 leading-relaxed break-words mt-1" x-text="entry.title"></p>
+                <div class="timeline-markdown text-sm text-slate-700 leading-relaxed break-words mt-1" @click.stop @mousedown.stop x-html="renderTimelineMarkdown(entry.title)"></div>
               </template>
               <template x-if="entry.actor || entry.meta.length > 0">
-                <p class="text-[11px] text-slate-400 mt-1 break-words" x-text="[entry.actor, ...entry.meta].filter(Boolean).join(' · ')"></p>
+                <p class="text-[11px] text-slate-400 mt-1 break-words select-text" @click.stop @mousedown.stop x-text="[entry.actor, ...entry.meta].filter(Boolean).join(' · ')"></p>
               </template>
-            </button>
+            </div>
           </div>
         </template>
       </div>
@@ -1518,6 +1571,88 @@ function cairnApp() {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    },
+
+    renderTimelineMarkdown(text) {
+      const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+      const html = [];
+      let paragraph = [];
+      let listType = null;
+      let inCode = false;
+      let codeLines = [];
+
+      const flushParagraph = () => {
+        if (!paragraph.length) return;
+        html.push(`<p>${paragraph.map(line => this.renderMarkdownInline(line)).join('<br>')}</p>`);
+        paragraph = [];
+      };
+      const closeList = () => {
+        if (!listType) return;
+        html.push(`</${listType}>`);
+        listType = null;
+      };
+      const flushCode = () => {
+        html.push(`<pre><code>${this.escapeHtml(codeLines.join('\n'))}</code></pre>`);
+        codeLines = [];
+      };
+
+      for (const line of lines) {
+        if (/^\s*```/.test(line)) {
+          if (inCode) {
+            inCode = false;
+            flushCode();
+          } else {
+            flushParagraph();
+            closeList();
+            inCode = true;
+            codeLines = [];
+          }
+          continue;
+        }
+        if (inCode) {
+          codeLines.push(line);
+          continue;
+        }
+        if (!line.trim()) {
+          flushParagraph();
+          closeList();
+          continue;
+        }
+
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          flushParagraph();
+          const nextType = unordered ? 'ul' : 'ol';
+          if (listType !== nextType) {
+            closeList();
+            html.push(`<${nextType}>`);
+            listType = nextType;
+          }
+          html.push(`<li>${this.renderMarkdownInline((unordered || ordered)[1])}</li>`);
+          continue;
+        }
+
+        closeList();
+        paragraph.push(line);
+      }
+
+      if (inCode) flushCode();
+      flushParagraph();
+      closeList();
+      return html.join('');
+    },
+
+    renderMarkdownInline(text) {
+      const parts = String(text ?? '').split(/(`[^`]*`)/g);
+      return parts.map((part) => {
+        if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+          return `<code>${this.escapeHtml(part.slice(1, -1))}</code>`;
+        }
+        return this.escapeHtml(part)
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+      }).join('');
     },
 
     highlightYamlScalar(value) {
