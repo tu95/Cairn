@@ -7,7 +7,9 @@
 
 用法::
 
-    python3 start.py                 # 前台启动 server+dispatcher（Ctrl+C 停止）
+    python3 start.py                 # 终端交互时进入控制面板；非交互等同 `up`
+    python3 start.py panel           # 交互式控制面板（启动/停止/重启/日志/自检）
+    python3 start.py up              # 前台启动 server+dispatcher（Ctrl+C 停止）
     python3 start.py up -d           # 后台启动，写 pidfile + 日志
     python3 start.py status          # 查看运行状态与健康检查
     python3 start.py logs -f         # 跟随查看后台日志
@@ -407,6 +409,66 @@ def cmd_clean(argv: list[str]) -> int:
     return 0
 
 
+# ── 交互式面板 ──────────────────────────────────────────────────────────────
+@command("panel", "交互式控制面板：启动/停止/重启/状态/日志/自检")
+def cmd_panel(argv: list[str]) -> int:
+    p = _common_run_parser("panel")
+    args = p.parse_args(argv)
+    url = f"http://{_health_host(args.host)}:{args.port}"
+
+    def do_restart() -> int:
+        _stop_background()
+        return _spawn_background(args.host, args.port, args.config)
+
+    def do_open() -> int:
+        import webbrowser
+
+        webbrowser.open(url)
+        print(f"已在浏览器打开 {url}")
+        return 0
+
+    # (按键, 说明, 动作)。动作均针对后台守护实例，面板本身不阻塞。
+    menu: list[tuple[str, str, Callable[[], int]]] = [
+        ("1", "启动（后台守护）", lambda: _spawn_background(args.host, args.port, args.config)),
+        ("2", "停止", lambda: _stop_background()),
+        ("3", "重启（后台守护）", do_restart),
+        ("4", "状态详情", lambda: cmd_status(["--host", args.host, "--port", str(args.port)])),
+        ("5", "查看日志（末尾 60 行）", lambda: cmd_logs(["-n", "60"])),
+        ("6", "跟随日志（Ctrl+C 返回面板）", lambda: cmd_logs(["-f"])),
+        ("7", "环境自检 doctor", lambda: cmd_doctor(["--host", args.host, "--port", str(args.port)])),
+        ("o", "浏览器打开 Web UI", do_open),
+    ]
+    print("Cairn 控制面板（q 退出；退出不影响后台进程）")
+    while True:
+        pid = _running_pid()
+        healthy = _probe_health(args.host, args.port)
+        proc_desc = f"运行中 pid={pid}" if pid is not None else "未运行"
+        net_desc = f"{'可达' if healthy else '不可达'} {url}"
+        print(f"\n── 守护进程：{proc_desc} ｜ 服务：{net_desc} " + "─" * 12)
+        for key, label, _ in menu:
+            print(f"  {key}  {label}")
+        print("  q  退出面板")
+        try:
+            choice = input("cairn> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if choice in ("q", "quit", "exit"):
+            return 0
+        if not choice:
+            continue
+        for key, _, action in menu:
+            if choice == key:
+                try:
+                    action()
+                except KeyboardInterrupt:
+                    # 子操作被 Ctrl+C 打断时回到面板，而不是整个退出
+                    print()
+                break
+        else:
+            print(f"无效选择：{choice}（输入左侧按键，或 q 退出）")
+
+
 # ── 入口 ────────────────────────────────────────────────────────────────────
 def _print_help() -> None:
     print("Cairn 项目控制器 —— 用法：python3 start.py <命令> [选项]\n")
@@ -414,11 +476,14 @@ def _print_help() -> None:
     width = max(len(n) for n in COMMANDS)
     for name, (_, help_text) in COMMANDS.items():
         print(f"  {name.ljust(width)}  {help_text}")
-    print("\n不带命令即等同 `up`（前台启动）。每个命令支持 --help 查看专属选项。")
+    print("\n终端里不带命令进入交互面板（panel）；非交互环境等同 `up`（前台启动）。每个命令支持 --help 查看专属选项。")
 
 
 def main(argv: list[str]) -> int:
     if not argv:
+        # 终端里裸跑进入交互面板；非交互环境（nohup/管道/服务托管）保持原前台启动语义
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            return cmd_panel([])
         return cmd_up([])
     first = argv[0]
     if first in ("-h", "--help", "help"):
