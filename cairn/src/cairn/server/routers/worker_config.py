@@ -394,6 +394,12 @@ def _build_dispatch_config(body: WorkerConfigForm, api_key: str) -> dict:
             "reason": {"timeout": 300, "max_intents": 2},
             "explore": {"timeout": 300, "conclude_timeout": 90},
         },
+        "container": {
+            "manage_docker": True,
+            "docker_binary": "docker",
+            "reap_orphans": True,
+            "confine_workdir": True,
+        },
         "common_env": {
             "TSEC_BASE_URL": "http://127.0.0.1:8000/api",
             "TSEC_AGENT_TOKEN": "local-agent-token",

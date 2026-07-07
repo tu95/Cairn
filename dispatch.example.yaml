@@ -41,6 +41,20 @@ tasks:
     # Time budget for conclude fallback used to summarize confirmed findings from the same session.
     conclude_timeout: 90
 
+container:
+  # Track and clean up docker containers the agent starts, per project.
+  # The agent still runs on the host (so local tools like IDA keep working);
+  # its `docker run/create/compose` calls are transparently labelled and the
+  # containers are removed when the project completes / stops / is deleted, plus
+  # a periodic reaper collects orphans from crashed or deleted projects.
+  manage_docker: true
+  # Host docker binary the internal shim forwards to.
+  docker_binary: "docker"
+  # Collect containers left by deleted / crashed projects.
+  reap_orphans: true
+  # Run each project's worker under workspace/<project_id> so its files stay together.
+  confine_workdir: true
+
 workers:
   # Worker priority is ascending: lower numbers are preferred first.
   # max_running is per-worker concurrency.

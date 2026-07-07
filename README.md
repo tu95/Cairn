@@ -53,6 +53,16 @@ DB、prompt 快照、pi worker 目录从 `~/.local/share`、`/tmp` 统一到 `./
 ### 4. Web UI 黑客终端暗色主题 —— [`cairn/src/cairn/server/static/index.html`](./cairn/src/cairn/server/static/index.html)
 通过 `tailwind.config` 重映射调色板（slate 阶梯反相、accent 的 50/100 转暗、700/800 转亮）实现整体换肤，避免逐个改工具类；仅对背景/文字复用同一色 token 的冲突做类名分离（`bg-white→bg-panel`、`bg-slate-800/900→bg-btn`）。全局等宽字体走系统栈（离线可用），Cytoscape 图的边标签与节点同步调暗。
 
+### 5. docker 环境隔离（确定性追踪 + 清理）—— [`cairn/src/cairn/dispatcher/runtime/containers.py`](./cairn/src/cairn/dispatcher/runtime/containers.py)
+agent 仍在宿主机跑（保留 IDA 等本机工具），但它内部对 docker 的调用被一个 PATH shim 拦截：给 `docker run/create/compose` 起的容器打上 `cairn.project` / `cairn.managed` 特征 label，并记录到 `workspace/<pid>/docker-ledger.jsonl`。命令解析是纯代码的确定性 argv 改写，不依赖 LLM。清理按 label 进行——项目 completed/stopped 时删对应容器（对接 dispatcher 既有清理生命周期），另有 reaper 周期回收已删除/崩溃项目残留的孤儿容器（`loop.py` 的 `_maybe_reap_orphans`）。worker 工作目录收敛到 `workspace/<pid>`。通过 `dispatch.yaml` 的 `container.manage_docker` 开关（默认示例中开启），关闭时行为与旧版完全一致。定位是"确定性追踪 + 兜底清理 + 落盘收敛"，不是防对抗硬沙箱。
+
+### 6. 项目完成 webhook 通知 —— [`cairn/src/cairn/server/webhook.py`](./cairn/src/cairn/server/webhook.py)
+项目 complete 时向配置的地址推送通知，后台线程 fire-and-forget，失败只记日志、绝不影响完成本身。服务端环境变量配置，**不配置则跳过**：
+- `CAIRN_WEBHOOK_URL` —— 接收地址（不设即关闭）
+- `CAIRN_WEBHOOK_SECRET` —— 可选，设置后对请求体做 HMAC-SHA256 签名，放在请求头 `X-Cairn-Signature: sha256=<hex>` 供机器人校验来源
+
+payload 形如 `{"event":"project.completed","project_id":...,"title":...,"description":...,"worker":...,"completed_at":...}`。
+
 ## 测试
 
 ```bash

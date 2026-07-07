@@ -59,6 +59,7 @@ class DispatcherLoop:
         self.project_cursor = 0
         self._settings_checked = False
         self._startup_healthchecks_checked = False
+        self._last_reap = 0.0
 
     def request_reload(self) -> None:
         self._reload_requested.set()
@@ -103,6 +104,7 @@ class DispatcherLoop:
                     self._refresh_runtime_projects(summaries)
                     self._cancel_inactive_tasks(summaries)
                     self._queue_container_cleanups(summaries)
+                    self._maybe_reap_orphans(summaries)
                     self._dispatch_available(summaries)
                     if (
                         self._reload_requested.is_set()
@@ -771,6 +773,23 @@ class DispatcherLoop:
     def _queue_container_cleanups(self, summaries: list[ProjectSummary]) -> None:
         self._cleanup_completed_containers(summaries)
         self._cleanup_stopped_containers(summaries)
+
+    def _maybe_reap_orphans(self, summaries: list[ProjectSummary]) -> None:
+        # 按 label 回收已删除/崩溃残留项目的容器，覆盖 completed/stopped 之外的漏网场景。
+        if not getattr(self.container_manager, "manage_docker", False):
+            return
+        now = time.time()
+        if now - self._last_reap < 15:
+            return
+        self._last_reap = now
+        live = {summary.id for summary in summaries}
+        self.cleanup_executor.submit(self._reap_orphans_safe, live)
+
+    def _reap_orphans_safe(self, live_project_ids: set[str]) -> None:
+        try:
+            self.container_manager.reap_orphans(live_project_ids)
+        except Exception:
+            LOG.exception("orphan container reap failed")
 
     def _reap_cleanup_futures(self) -> None:
         done = [future for future in self.cleanup_futures if future.done()]

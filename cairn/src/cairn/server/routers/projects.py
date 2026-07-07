@@ -17,6 +17,7 @@ from cairn.server.models import (
     UpdateProjectTitleRequest,
     UpdateProjectStatusRequest,
 )
+from cairn.server.webhook import notify_project_completed
 from cairn.server.services import (
     build_intents,
     check_project_completed,
@@ -257,7 +258,7 @@ def release_project_reason(project_id: str, body: HeartbeatRequest):
 @router.post("/projects/{project_id}/complete", response_model=Intent)
 def complete_project(project_id: str, body: CompleteRequest):
     with get_conn() as conn:
-        check_project_active(conn, project_id)
+        project_row = check_project_active(conn, project_id)
         expire_reason_leases(conn, project_id)
         validate_facts_exist(conn, project_id, body.from_)
         validate_goal_not_in_sources(body.from_)
@@ -285,6 +286,18 @@ def complete_project(project_id: str, body: CompleteRequest):
             WHERE id = ?
             """,
             (project_id,),
+        )
+
+        notify_project_completed(
+            {
+                "event": "project.completed",
+                "project_id": project_id,
+                "title": project_row["title"],
+                "description": body.description,
+                "from": body.from_,
+                "worker": body.worker,
+                "completed_at": now,
+            }
         )
 
         return Intent(

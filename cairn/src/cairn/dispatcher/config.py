@@ -146,6 +146,16 @@ class TasksConfig(BaseModel):
 class ContainerConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    # docker 隔离：给 agent 起的容器打特征 label，按项目追踪与清理，
+    # 项目 completed/stopped/deleted 时删除对应容器；关闭时行为与旧版一致。
+    manage_docker: bool = False
+    # 宿主机真实 docker 可执行文件；shim 会 exec 到它。
+    docker_binary: str = "docker"
+    # 回收已删除/崩溃残留项目的孤儿容器。
+    reap_orphans: bool = True
+    # 把 worker 工作目录收敛到 workspace/<project_id>，让落盘集中。
+    confine_workdir: bool = True
+
 
 class RuntimeConfig(BaseModel):
     max_workers: int = Field(gt=0)

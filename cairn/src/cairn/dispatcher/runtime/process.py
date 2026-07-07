@@ -21,22 +21,32 @@ class ProcessResult:
 
 
 class LocalManagedProcess:
-    def __init__(self, command: list[str], env: dict[str, str], timeout_seconds: int | None = None):
+    def __init__(
+        self,
+        command: list[str],
+        env: dict[str, str],
+        timeout_seconds: int | None = None,
+        cwd: str | None = None,
+    ):
         self.command = command
         self.env = env
         self.timeout_seconds = timeout_seconds
+        self.cwd = cwd
         self._process: subprocess.Popen[str] | None = None
         self._cancel_reason: str | None = None
 
     def start(self) -> None:
         merged_env = os.environ.copy()
         merged_env.update(self.env)
+        if self.cwd is not None:
+            os.makedirs(self.cwd, exist_ok=True)
         self._process = subprocess.Popen(
             self.command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             env=merged_env,
+            cwd=self.cwd,
             start_new_session=True,
         )
 
