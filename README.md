@@ -1,202 +1,65 @@
-<div align="center">
-
-<img src="./README/banner.png" alt="Cairn Banner"/>
-
 # Cairn
-### More Than Just AI Penetration Testing — Towards General State-Space Search
 
-<p>
-  <a href="https://zc.tencent.com/hackathon" target="_blank" rel="noopener noreferrer">
-    <img src="./README/tencent.png" alt="Tencent" height="55" />
-  </a>
-  <a href="https://zc.tencent.com/hackathon" target="_blank" rel="noopener noreferrer">
-    <img src="./README/tch.png" alt="TCH" height="55" />
-  </a>
-</p>
+基于事实图（Fact-Intent Graph）的协作式探索引擎。本 README 只记录本次维护改动与运行方式，原有的项目介绍内容已移除。
 
-Cairn is a general-purpose problem-solving engine. <br/>It defines no roles, no workflows. Given an origin and a goal, it searches for a path through an unknown state space. <br/>AI Penetration Testing is one such problem — and a proven one.
+## 快速开始
 
-<p>
-  <a href="https://discord.gg/nDSy4NZVP" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" />
-  </a>
-  <a href="https://x.com/le1xia0" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/X-000000?style=flat-square&logo=x&logoColor=white" alt="X" />
-  </a>
-</p>
+统一入口是根目录的 [`start.py`](./start.py)（纯标准库，零依赖）。
 
-</div>
+**前提**
+- macOS 或 Linux，Python ≥ 3.12，已安装 [`uv`](https://docs.astral.sh/uv/)
+- PATH 上至少有一个 worker CLI：`codex` 或 `claude`
 
-<p align="center">
-  <a href="https://www.bilibili.com/video/BV1a8R5BhEVi/" target="_blank" rel="noopener noreferrer">
-    <img src="./README/cairn.png" alt="Cairn runtime screenshot" width="900" />
-  </a>
-</p>
-
-## What is Cairn?
-
-Penetration testing is fundamentally a **directed search through a near-infinite state space**:
-
-- **Origin**: known (target IP, target system)
-- **Goal**: defined (get a shell, capture the flag)
-- **Path**: unknown
-
-This structure is not unique to penetration testing. Vulnerability research, mathematical proof, CTF challenges — any problem with a clear starting point, a clear success condition, and an unknown path in between shares the same shape.
-
-Cairn is built for this class of problems. Penetration testing is the first domain it has been validated on.
-
-The engine is built on a **Blackboard Architecture** with an explicit fact-intent graph. Three primitives are all it needs:
-
-| Concept | Meaning |
-|---------|---------|
-| **Fact** | A confirmed, objective finding written to the board |
-| **Intent** | A declared direction of exploration, not yet executed |
-| **Hint** | Human judgment injected at any time; absorbed by agents on the next read |
-
-The graph grows from `origin` toward `goal`. Every new Fact is a stepping stone; every Intent is a step into the unknown.
-
-Agent Workers run an OODA loop — Observe the full graph, Orient to the current state, Decide on next intents, Act to explore — and write their findings back as new Facts. Workers have no fixed roles. Tasks are generated at runtime from the graph's current state, not from predefined job descriptions.
-
-Agents coordinate exclusively through the shared board (Stigmergy). No direct communication. No information silos.
-
-## Cairn in Action
-
-https://github.com/user-attachments/assets/e557b1ac-dda4-41cb-87dd-9d56dbf05133
-
-
-## How It Works
-
-Three task types, all executed by the same Worker:
-
-| Task | What it does | Output |
-|------|-------------|--------|
-| **Bootstrap** | At project start, attempts to solve the problem directly | Fact + possible Complete |
-| **Reason** | Reads the full graph: is the goal met? What should be explored next? | Complete / new Intents / no-op |
-| **Explore** | Claims one Intent, executes the exploration, reports findings | One Fact |
-
-System architecture:
-
-```
-          ┌──────────────────────────────────┐
-          │           Cairn Server           │
-          │    Facts + Intents + Hints       │
-          └─────────────────┬────────────────┘
-                            │
-                     Read / Write API
-                            │
-          ┌─────────────────┴────────────────┐
-          │             Dispatcher           │
-          │   Schedules tasks, launches      │
-          │   local agents, writes protocol  │
-          └──────────┬───────────────┬───────┘
-                     │               │
-     ┌───────────────┴──┐     ┌──────┴──────────────┐
-     │  Local Workers   │     │  Local Workers      │
-     │   (Project A)    │     │   (Project B)       │
-     │  ┌────┐  ┌────┐  │     │  ┌────┐  ┌────┐     │
-     │  │ W. │  │ W. │  │     │  │ W. │  │ W. │     │
-     │  └────┘  └────┘  │     │  └────┘  └────┘     │
-     └──────────────────┘     └─────────────────────┘
-```
-
-**Cairn Server** maintains graph consistency only.
-
-**Cairn Dispatcher** reads the graph, schedules tasks, launches local agent commands, and is the sole writer to the protocol. Multiple Agent Workers can run concurrently on the host. Agent Workers only receive a prompt and return structured output.
-
-Supported worker backends: **Codex** and **Pi**. The dispatcher still has a Claude Code driver for compatibility, but the default configuration is Codex-first.
-
-## Results
-
-**Tencent Cloud Hackathon · AI Penetration Testing Challenge · 2nd Edition**
-
-610 teams · 1,345 participants · top universities and security firms across China
-
-| Metric | Value |
-|--------|-------|
-| Problems solved | **54 / 54 — only team to AK** |
-| Final ranking | 3rd |
-
-> The system had never been tested before the competition. The full pipeline came online for the first time at 4 AM on race day. No training, no tuning, no domain-specific tooling. Zero MCP tools, zero RAG, zero predefined agent roles.
-
-## Further Reading
-
-- <a href="https://mp.weixin.qq.com/s/DlpEH7bVr0xi0VawPJs3XA" target="_blank" rel="noopener noreferrer">The Strongest AI Penetration Testing Agent: Postmortem of the Only Team to Achieve AK at the TCH Tencent Cloud Hackathon Intelligent Penetration Testing Challenge (2nd Edition)</a>
-- <a href="https://mp.weixin.qq.com/s/2rEqFLvkxvYWM3gW170C2w" target="_blank" rel="noopener noreferrer">The Pathless Path: Cairn AI from Penetration Testing to General Problem Solving</a>
-
-## Getting Started
-
-**Prerequisites**
- 
-- macOS or Linux
-- Python ≥ 3.12
-- `uv`
-- At least one local worker CLI on `PATH`: `claude` for Claude Code or `codex` for Codex
-
-
-Create your local dispatcher configuration:
+**常用命令**
 
 ```bash
-cp dispatch.example.yaml dispatch.yaml
+python3 start.py            # 前台启动 server + dispatcher（Ctrl+C 停止）
+python3 start.py up -d      # 后台启动，写 pidfile + 日志到 workspace/
+python3 start.py status     # 查看进程与服务健康
+python3 start.py logs -f    # 跟随后台日志
+python3 start.py restart -d # 后台重启
+python3 start.py stop       # 优雅停止后台实例
+python3 start.py doctor     # 环境自检（uv / 配置 / worker CLI）
+python3 start.py test       # 运行回归测试
+python3 start.py --help     # 查看全部命令
 ```
 
-Worker commands run directly on this machine. There is no Docker daemon, Docker socket, or worker image in the local runtime.
-For Codex, the default worker mode uses the already authenticated local `codex` CLI, so no API key is required after `codex login`. API-key mode remains available from the Web UI if you want to point Codex at a custom endpoint.
- 
-### Local launcher (recommended)
- 
+首次运行会自动从 `dispatch.example.yaml` 生成 `dispatch.yaml`，之后可在 Web UI 或直接编辑该文件配置 worker。服务默认监听 `http://127.0.0.1:8000`。
+
+## 运行时目录
+
+所有运行产物统一落在 `./workspace/`（已 gitignore，可用 `CAIRN_WORKSPACE` 覆盖）：
+
+- `workspace/cairn.db` —— SQLite 数据库
+- `workspace/prompts/` —— worker 引用的图快照
+- `workspace/pi/` —— pi worker 运行目录
+- `workspace/cairn.pid` / `workspace/cairn.log` —— 后台实例的 pid 与日志
+
+## 本次改动
+
+引用（commit `bbdc119` 及本次提交）：
+
+### 1. 统一控制器 `start.py`（本次新增）
+单文件入口，负责启动与编排，业务逻辑仍委托给已验证的 `cairn` CLI。通过命令注册表扩展（见文件末尾“扩展方式”），后台实例用 workspace 下的 pidfile 管理，不依赖 screen。参见 [`start.py`](./start.py)。
+
+### 2. 服务端并发正确性 —— [`cairn/src/cairn/server/db.py`](./cairn/src/cairn/server/db.py)
+- `get_conn` 改为自动提交 + 手动 `BEGIN IMMEDIATE`，每个请求全程持写锁，使 `heartbeat`/`conclude` 的“先 SELECT 校验、再 UPDATE”认领逻辑原子化，杜绝并发下同一 intent 被多个 worker 重复认领。
+- 增加 `PRAGMA busy_timeout=15000`：WAL 写冲突时排队等待，而非直接抛 `database is locked` 导致 500。
+- `configure` 改用独立连接建表/迁移，避免与显式事务和 `executescript` 冲突。
+
+### 3. 运行时目录归拢 —— [`cairn/src/cairn/workspace.py`](./cairn/src/cairn/workspace.py)（新增）
+DB、prompt 快照、pi worker 目录从 `~/.local/share`、`/tmp` 统一到 `./workspace/`（`CAIRN_WORKSPACE` 可覆盖）。接线见 `server/db.py`、`dispatcher/tasks/common.py`、`dispatcher/workers/adapters/pi.py`。
+
+### 4. Web UI 黑客终端暗色主题 —— [`cairn/src/cairn/server/static/index.html`](./cairn/src/cairn/server/static/index.html)
+通过 `tailwind.config` 重映射调色板（slate 阶梯反相、accent 的 50/100 转暗、700/800 转亮）实现整体换肤，避免逐个改工具类；仅对背景/文字复用同一色 token 的冲突做类名分离（`bg-white→bg-panel`、`bg-slate-800/900→bg-btn`）。全局等宽字体走系统栈（离线可用），Cytoscape 图的边标签与节点同步调暗。
+
+## 测试
+
 ```bash
-uv run --project cairn cairn launch --config dispatch.yaml
-```
- 
-This starts the Web/API server on `0.0.0.0:8000`, waits for it to become healthy, then starts the dispatcher in the same process. Open it from this machine at `http://127.0.0.1:8000` or from another device using this machine's LAN/Tailscale IP, for example `http://100.103.239.9:8000/`. The dispatcher invokes your local `claude` or `codex` CLI according to `dispatch.yaml`.
-
-Storage locations used at runtime:
-- Worker config: `dispatch.yaml` (and model catalog: `dispatch.models.yaml` next to it).
-- Runtime artifacts are consolidated under `./workspace/` (git-ignored). Override the location with the `CAIRN_WORKSPACE` env var.
-  - SQLite DB: `workspace/cairn.db`.
-  - Prompt snapshots referenced by workers: `workspace/prompts/<phase>-<random>/graph.yaml` (override with `CAIRN_GRAPH_SNAPSHOT_ROOT` env var).
-
-The Web UI can edit worker API settings, and runtime config changes are hot-reloaded: the dispatcher reloads after current tasks finish when config is updated.
-Model names are now managed from the same UI (save/delete/set default), persisted in `dispatch.models.yaml` next to `dispatch.yaml` by default.
- 
-### Manual split-process mode
- 
-```bash
-# Start the server
-uv run --project cairn cairn serve
- 
-# Run the dispatcher
-uv run --project cairn cairn dispatch --config dispatch.yaml
- 
-# Run startup health checks only
-uv run --project cairn cairn dispatch --config dispatch.yaml --startup-healthcheck-only
+python3 start.py test
+# 等价于：uv run --project cairn --group dev pytest
 ```
 
-### Tests
+## License
 
-Run the fast regression suite without live model endpoints:
-
-```bash
-uv run --project cairn --group dev pytest
-```
-
-## Disclaimer
-
-Cairn is a general-purpose problem-solving engine. Although it supports penetration testing, CTF solving, security assessment, and vulnerability research workflows, it is intended to be used only in environments where you have explicit authorization to operate.
-
-You are solely responsible for how you use this project. Do not use Cairn against systems, networks, applications, or data without clear prior permission from the owner or operator. Unauthorized security testing, exploitation, or data access may be illegal and may cause harm.
-
-The developers and contributors of this project do not endorse or accept responsibility for any misuse, abuse, damage, loss, or legal consequences arising from its use. By using this project, you agree to ensure that your activities comply with all applicable laws, regulations, contractual obligations, and professional or organizational policies in your jurisdiction.
-
-## Star History
-
-<a href="https://www.star-history.com/#oritera/Cairn&Date" target="_blank" rel="noopener noreferrer">
-  <img src="https://api.star-history.com/svg?repos=oritera/Cairn&type=Date" alt="Star History Chart" />
-</a>
-
-## ⚖️ License
-This project is licensed under **GNU AGPLv3** for personal and educational use.
-
-**Commercial Use**: If you wish to use this project in a commercial or proprietary environment without the AGPL-3.0 open-source obligations, **please contact me to obtain a commercial license.**
-
-**Contributions**: By submitting a Pull Request, you agree that your contributions may be used under both the AGPL-3.0 and the project's commercial license.
+见 [LICENSE](./LICENSE)（GNU AGPLv3）。
