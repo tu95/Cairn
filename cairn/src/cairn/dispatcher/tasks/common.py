@@ -12,11 +12,12 @@ from cairn.dispatcher.runtime.cancellation import TaskCancellation
 from cairn.dispatcher.runtime.containers import ContainerManager
 from cairn.dispatcher.runtime.heartbeat import HeartbeatLease
 from cairn.dispatcher.runtime.process import ProcessResult
+from cairn.workspace import workspace_path
 
 HEALTHCHECK_COMMUNICATE_GRACE_SECONDS = 10
 PROCESS_COMMUNICATE_GRACE_SECONDS = 15
 LOG_PREVIEW_LIMIT = 1200
-GRAPH_SNAPSHOT_ROOT = os.environ.get("CAIRN_GRAPH_SNAPSHOT_ROOT", "/tmp/cairn-prompts")
+GRAPH_SNAPSHOT_ROOT = os.environ.get("CAIRN_GRAPH_SNAPSHOT_ROOT") or str(workspace_path("prompts"))
 LOG = logging.getLogger(__name__)
 
 

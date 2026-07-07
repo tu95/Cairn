@@ -5,7 +5,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-DEFAULT_DB = Path.home() / ".local" / "share" / "cairn" / "cairn.db"
+from cairn.workspace import workspace_path
+
+DEFAULT_DB = workspace_path("cairn.db")
 
 _db_path: Path | None = None
 
@@ -88,9 +90,15 @@ def configure(path: Path) -> None:
         return
     _db_path = path
     _db_path.parent.mkdir(parents=True, exist_ok=True)
-    with get_conn() as conn:
+    # 建表/迁移用独立连接，避免和 get_conn 的显式事务与 executescript 的隐式提交打架
+    conn = sqlite3.connect(str(_db_path))
+    conn.row_factory = sqlite3.Row
+    try:
         conn.executescript(SCHEMA)
         _ensure_project_columns(conn)
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _ensure_project_columns(conn: sqlite3.Connection) -> None:
@@ -106,15 +114,20 @@ def _ensure_project_columns(conn: sqlite3.Connection) -> None:
 @contextmanager
 def get_conn() -> Generator[sqlite3.Connection, None, None]:
     assert _db_path is not None
-    conn = sqlite3.connect(str(_db_path))
+    # 自动提交模式下手动开 IMMEDIATE 事务：每个请求全程持写锁，
+    # 使 "先 SELECT 校验、再 UPDATE" 的认领逻辑原子化，杜绝并发下的重复认领；
+    # busy_timeout 让并发请求排队等待而不是直接抛 "database is locked"。
+    conn = sqlite3.connect(str(_db_path), timeout=15.0, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=15000")
+    conn.execute("BEGIN IMMEDIATE")
     try:
         yield conn
-        conn.commit()
+        conn.execute("COMMIT")
     except Exception:
-        conn.rollback()
+        conn.execute("ROLLBACK")
         raise
     finally:
         conn.close()

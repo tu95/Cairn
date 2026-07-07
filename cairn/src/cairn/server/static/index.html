@@ -16,11 +16,13 @@
 <script defer src="/static/vendor/alpine.min.js"></script>
 <style>
   [x-cloak] { display: none !important; }
-  #cy { width: 100%; height: 100%; }
+  #cy { width: 100%; height: 100%; background: #0b111b; }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-  .overlay { background: rgba(15,23,42,0.25); backdrop-filter: blur(6px); }
+  ::-webkit-scrollbar-thumb { background: #2b3a4f; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3b4d66; }
+  html, body { background: #0b111b; }
+  .overlay { background: rgba(2,6,14,0.62); backdrop-filter: blur(6px); }
   .timeline-flash { animation: timelineFlash 1s ease-out; }
   .timeline-markdown {
     user-select: text;
@@ -36,21 +38,21 @@
     margin-top: 0;
   }
   .timeline-markdown code {
-    border: 1px solid #e2e8f0;
+    border: 1px solid #1c2636;
     border-radius: 0.375rem;
-    background: #f8fafc;
+    background: #0f1725;
     padding: 0.05rem 0.25rem;
-    color: #334155;
+    color: #c7cfdc;
     font-size: 0.78rem;
   }
   .timeline-markdown pre {
     margin: 0.5rem 0 0;
     overflow-x: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #1c2636;
     border-radius: 0.75rem;
-    background: #f8fafc;
+    background: #0b111b;
     padding: 0.625rem 0.75rem;
-    color: #334155;
+    color: #c7cfdc;
     font-size: 0.72rem;
     line-height: 1.55;
   }
@@ -71,7 +73,7 @@
     margin-top: 0.15rem;
   }
   .timeline-markdown a {
-    color: #0f766e;
+    color: #34d399;
     text-decoration: underline;
     text-underline-offset: 2px;
   }
@@ -267,12 +269,33 @@
   }
 </style>
 <script>
+  // 黑客终端暗色主题：slate 阶梯反相（低阶=暗底、高阶=亮字），
+  // accent 的 50/100 改暗色调、700/800 改亮色调，使暗底上的徽章仍可读。
+  // 全局等宽字体走系统栈，不依赖联网字体，保证离线可用。
+  const MONO = ['ui-monospace','SFMono-Regular','SF Mono','JetBrains Mono','Menlo','Monaco','Cascadia Code','Consolas','Liberation Mono','monospace']
   tailwind.config = {
     theme: {
-      fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Inter','Segoe UI','sans-serif'] },
+      fontFamily: { sans: MONO, mono: MONO },
       extend: {
         colors: {
-          brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' }
+          // 面板底色与中性按钮底：把被复用的 bg-panel / bg-btn(900) 迁到这两个 token
+          panel: '#111a27',
+          btn: '#334155',
+          // slate 反相：50 最暗（页面底），950 最亮（强标题）
+          slate: {
+            50:'#0b111b',100:'#0f1725',200:'#1c2636',300:'#28344a',
+            400:'#78849a',500:'#94a3b8',600:'#aeb9c9',700:'#c7cfdc',
+            800:'#dde3ec',900:'#f1f4f9',950:'#f8fafc'
+          },
+          brand: { 50:'#181a34',100:'#1e2246',200:'#2a2f63',300:'#4f46e5',400:'#6366f1',500:'#818cf8',600:'#a5b4fc',700:'#c7d2fe',800:'#dbe2ff',900:'#eef2ff' },
+          emerald: { 50:'#0c1a14',100:'#12271d',700:'#34d399',800:'#6ee7b7' },
+          teal:    { 50:'#0b1a1a',100:'#102626',700:'#2dd4bf',800:'#5eead4' },
+          sky:     { 50:'#0b1826',100:'#0f2436',700:'#38bdf8',800:'#7dd3fc' },
+          violet:  { 50:'#15122a',100:'#1d1840',700:'#a78bfa',800:'#c4b5fd' },
+          rose:    { 50:'#231019',100:'#331723',700:'#fb7185',800:'#fda4af' },
+          amber:   { 50:'#221a0b',100:'#332510',700:'#fbbf24',800:'#fcd34d' },
+          orange:  { 50:'#231508',100:'#331f0c',700:'#fb923c',800:'#fdba74' },
+          red:     { 50:'#230f0f',100:'#331616',700:'#f87171',800:'#fca5a5' }
         }
       }
     }
@@ -283,9 +306,9 @@
 
 <!-- ═══════════ PROJECT LIST VIEW ═══════════ -->
 <div x-show="view === 'list'" x-cloak class="flex-1 flex flex-col overflow-hidden">
-  <header class="bg-white/80 backdrop-blur border-b border-slate-200/60 px-4 py-2.5 flex items-center gap-3 shrink-0">
+  <header class="bg-panel/80 backdrop-blur border-b border-slate-200/60 px-4 py-2.5 flex items-center gap-3 shrink-0">
     <div class="flex items-center gap-2.5 min-w-0">
-      <div class="h-8 w-8 rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/40 flex items-center justify-center shrink-0 overflow-hidden">
+      <div class="h-8 w-8 rounded-lg border border-slate-200 bg-panel shadow-sm shadow-slate-200/40 flex items-center justify-center shrink-0 overflow-hidden">
         <img src="/static/favicon.svg" alt="" class="w-5 h-5 block">
       </div>
       <span class="font-semibold text-slate-700 tracking-tight">Cairn</span>
@@ -349,7 +372,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       <template x-for="p in projects" :key="p.id">
         <div @click="openProject(p.id)"
-          class="group h-full flex flex-col bg-white rounded-2xl border border-slate-200/60 p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/50 hover:border-slate-300 hover:-translate-y-0.5">
+          class="group h-full flex flex-col bg-panel rounded-2xl border border-slate-200/60 p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/50 hover:border-slate-300 hover:-translate-y-0.5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-[11px] font-mono text-slate-400 tracking-wide" x-text="p.id"></span>
             <span class="px-1.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-[0.12em]"
@@ -453,7 +476,7 @@
 <!-- ═══════════ GRAPH VIEW ═══════════ -->
 <template x-if="view === 'graph'">
 <div class="flex-1 flex flex-col overflow-hidden">
-  <header class="bg-white/80 backdrop-blur border-b border-slate-200/60 px-4 py-2.5 flex items-center gap-3 shrink-0 z-20">
+  <header class="bg-panel/80 backdrop-blur border-b border-slate-200/60 px-4 py-2.5 flex items-center gap-3 shrink-0 z-20">
     <button @click="backToList()" class="p-1.5 rounded-lg hover:bg-slate-100 transition text-slate-400 hover:text-slate-600">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
     </button>
@@ -489,19 +512,19 @@
       <template x-if="replay.active">
         <div class="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50/80 px-2 py-1 text-xs text-violet-700">
           <span class="font-medium whitespace-nowrap" x-text="replayProgressLabel()"></span>
-          <button @click="toggleProjectReplayPlayback()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-violet-200 bg-white/80 hover:bg-white transition" :title="replay.playing ? 'Pause replay' : 'Resume replay'">
+          <button @click="toggleProjectReplayPlayback()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-violet-200 bg-panel/80 hover:bg-panel transition" :title="replay.playing ? 'Pause replay' : 'Resume replay'">
             <svg x-show="replay.playing" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6h3v12H8zM13 6h3v12h-3z"/></svg>
             <svg x-show="!replay.playing" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg>
           </button>
-          <button @click="restartProjectReplay()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-violet-200 bg-white/80 hover:bg-white transition" title="Restart replay">
+          <button @click="restartProjectReplay()" class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-violet-200 bg-panel/80 hover:bg-panel transition" title="Restart replay">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"/><path d="M3 3v6h6"/></svg>
           </button>
-          <select x-model="replay.stepMs" @change="updateReplaySpeed()" class="h-6 rounded-md border border-violet-200 bg-white/80 px-1.5 text-[11px] text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100">
+          <select x-model="replay.stepMs" @change="updateReplaySpeed()" class="h-6 rounded-md border border-violet-200 bg-panel/80 px-1.5 text-[11px] text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-100">
             <option value="700">Fast</option>
             <option value="1100">Normal</option>
             <option value="1600">Slow</option>
           </select>
-          <button @click="exitProjectReplay()" class="inline-flex h-6 items-center justify-center rounded-md border border-violet-200 bg-white/80 px-2 hover:bg-white transition">
+          <button @click="exitProjectReplay()" class="inline-flex h-6 items-center justify-center rounded-md border border-violet-200 bg-panel/80 px-2 hover:bg-panel transition">
             Exit
           </button>
         </div>
@@ -547,11 +570,11 @@
     <!-- Graph -->
     <div class="flex-1 relative min-w-0">
       <div class="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-        <button @click="fitGraph()" class="h-7 w-7 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-slate-200/60 text-slate-500 hover:text-slate-700 hover:bg-white transition inline-flex items-center justify-center" title="Fit graph" aria-label="Fit graph">
+        <button @click="fitGraph()" class="h-7 w-7 bg-panel/90 backdrop-blur rounded-lg shadow-sm border border-slate-200/60 text-slate-500 hover:text-slate-700 hover:bg-panel transition inline-flex items-center justify-center" title="Fit graph" aria-label="Fit graph">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
         <select x-model="layoutMode" @change="applySelectedLayout()"
-          class="h-7 bg-white/90 backdrop-blur rounded-lg shadow-sm border border-slate-200/60 px-2.5 text-xs text-slate-600 hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300 transition">
+          class="h-7 bg-panel/90 backdrop-blur rounded-lg shadow-sm border border-slate-200/60 px-2.5 text-xs text-slate-600 hover:bg-panel focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300 transition">
           <option value="dagre_tb">Dagre ↓</option>
           <option value="dagre_lr">Dagre →</option>
           <option value="klay_tb">Klay ↓</option>
@@ -563,7 +586,7 @@
 
       <template x-if="project.project.reason">
         <div class="absolute top-14 right-3 z-10 max-w-80">
-          <div class="reason-panel-running relative overflow-hidden rounded-2xl border border-sky-200/80 bg-white/92 px-3.5 py-3 shadow-lg shadow-sky-100/60 backdrop-blur">
+          <div class="reason-panel-running relative overflow-hidden rounded-2xl border border-sky-200/80 bg-panel/92 px-3.5 py-3 shadow-lg shadow-sky-100/60 backdrop-blur">
             <div class="flex items-start gap-3">
               <span class="reason-beacon mt-1 shrink-0"></span>
               <div class="min-w-0">
@@ -591,36 +614,36 @@
       <div class="absolute top-3 right-3 z-10 flex flex-wrap justify-end gap-2">
         <div class="flex gap-1.5" x-show="projectIsActive()">
           <button @click="openCreateIntent()" :disabled="!canActOnSelectedFacts()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-brand-200 text-brand-600 rounded-lg shadow-sm text-xs font-medium hover:bg-brand-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-brand-200 text-brand-600 rounded-lg shadow-sm text-xs font-medium hover:bg-brand-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             Intent
           </button>
           <button @click="openCompleteProject()" :disabled="!canActOnSelectedFacts()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-teal-200 text-teal-600 rounded-lg shadow-sm text-xs font-medium hover:bg-teal-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-teal-200 text-teal-600 rounded-lg shadow-sm text-xs font-medium hover:bg-teal-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
             Complete
           </button>
         </div>
         <div class="flex gap-1.5" x-show="projectCanWriteHints()">
           <button @click="openHintModal()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-amber-200 text-amber-600 rounded-lg shadow-sm text-xs font-medium hover:bg-amber-50 transition flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-amber-200 text-amber-600 rounded-lg shadow-sm text-xs font-medium hover:bg-amber-50 transition flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547Z"/></svg>
             Hint
           </button>
         </div>
         <div class="flex gap-1.5" x-show="projectIsActive()">
           <button @click="sendHeartbeatForSelectedIntent()" :disabled="!selectedActionableOpenIntentRecord()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-slate-200 text-slate-600 rounded-lg shadow-sm text-xs font-medium hover:bg-slate-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-slate-200 text-slate-600 rounded-lg shadow-sm text-xs font-medium hover:bg-slate-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12h3.5l2.75-6 3.5 12 2.75-7H21"/></svg>
             <span x-text="selectedIntentPrimaryActionLabel()"></span>
           </button>
           <button @click="releaseSelectedIntent()" :disabled="!selectedReleasableOpenIntentRecord()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-amber-200 text-amber-700 rounded-lg shadow-sm text-xs font-medium hover:bg-amber-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-amber-200 text-amber-700 rounded-lg shadow-sm text-xs font-medium hover:bg-amber-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 10V7.75A3.75 3.75 0 1 1 16.5 7"/><path d="M7.5 10.5h9A1.5 1.5 0 0 1 18 12v6A1.5 1.5 0 0 1 16.5 19.5h-9A1.5 1.5 0 0 1 6 18v-6A1.5 1.5 0 0 1 7.5 10.5Z"/><path d="M12 14.25v1.5"/></svg>
             Release
           </button>
           <button @click="selectedActionableOpenIntentRecord() && openConclude(selectedActionableOpenIntentRecord())" :disabled="!selectedActionableOpenIntentRecord()"
-            class="px-3 py-1.5 bg-white/90 backdrop-blur border border-teal-200 text-teal-600 rounded-lg shadow-sm text-xs font-medium hover:bg-teal-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
+            class="px-3 py-1.5 bg-panel/90 backdrop-blur border border-teal-200 text-teal-600 rounded-lg shadow-sm text-xs font-medium hover:bg-teal-50 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.25 3H7.5A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h9a2.25 2.25 0 0 0 2.25-2.25V8.25L14.25 3Z"/><path d="M14.25 3v5.25h4.5"/><path d="M9 13.5 10.875 15.375 15 11.25"/></svg>
             Conclude
           </button>
@@ -635,7 +658,7 @@
     </div>
 
     <!-- Side panel -->
-    <div class="border-l border-slate-200/60 bg-white flex flex-col overflow-hidden shrink-0 relative z-20" :style="{ width: sidePanelWidth + 'px', minWidth: sidePanelWidth + 'px', flexBasis: sidePanelWidth + 'px' }">
+    <div class="border-l border-slate-200/60 bg-panel flex flex-col overflow-hidden shrink-0 relative z-20" :style="{ width: sidePanelWidth + 'px', minWidth: sidePanelWidth + 'px', flexBasis: sidePanelWidth + 'px' }">
       <div class="flex border-b border-slate-100 shrink-0">
         <button @click="sideTab = 'detail'" class="flex-1 px-3 py-2.5 text-xs font-medium transition"
           :class="sideTab === 'detail' ? 'text-brand-600 border-b-2 border-brand-500' : 'text-slate-400 hover:text-slate-600'">Detail</button>
@@ -650,7 +673,7 @@
       <!-- Detail -->
       <div x-show="sideTab === 'detail'" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/40">
         <template x-if="!selectedNode">
-          <div class="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-5 py-10 text-center shadow-sm">
+          <div class="rounded-2xl border border-dashed border-slate-200 bg-panel/80 px-5 py-10 text-center shadow-sm">
             <p class="text-sm text-slate-400">Click a node or edge</p>
             <p class="text-xs text-slate-300 mt-1">Shift+click for multi-select</p>
           </div>
@@ -658,7 +681,7 @@
         <template x-if="selectedNode && selectedNode.type === 'fact' && selectedFacts.length > 1">
           <div class="space-y-3">
             <template x-for="fact in selectedFactRecords()" :key="fact.id">
-              <article class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <article class="rounded-2xl border border-slate-200 bg-panel shadow-sm overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
                   <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2 min-w-0">
@@ -693,7 +716,7 @@
           </div>
         </template>
         <template x-if="selectedNode && selectedNode.type === 'fact' && selectedFactRecord() && selectedFacts.length <= 1">
-          <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <section class="rounded-2xl border border-slate-200 bg-panel shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold"
@@ -742,7 +765,7 @@
           </section>
         </template>
         <template x-if="selectedNode && selectedNode.type === 'intent' && selectedIntentRecord()">
-          <section class="rounded-2xl border border-violet-200/80 bg-white shadow-sm overflow-hidden">
+          <section class="rounded-2xl border border-violet-200/80 bg-panel shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-violet-100 bg-violet-50/70">
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-mono font-bold" x-text="selectedIntentId()"></span>
@@ -770,13 +793,13 @@
       <!-- Hints -->
       <div x-show="sideTab === 'hints'" class="flex-1 overflow-y-auto p-4 space-y-3 bg-amber-50/25">
         <template x-if="project.hints.length === 0">
-          <div class="rounded-2xl border border-dashed border-amber-200 bg-white/80 px-5 py-10 text-center shadow-sm">
+          <div class="rounded-2xl border border-dashed border-amber-200 bg-panel/80 px-5 py-10 text-center shadow-sm">
             <p class="text-sm text-slate-300">No hints yet</p>
           </div>
         </template>
         <template x-for="h in project.hints" :key="h.id">
           <button type="button" @click="openHintTimelineEntry(h.id)"
-            class="w-full text-left rounded-2xl border border-amber-200/80 bg-white shadow-sm overflow-hidden transition hover:bg-amber-50/40">
+            class="w-full text-left rounded-2xl border border-amber-200/80 bg-panel shadow-sm overflow-hidden transition hover:bg-amber-50/40">
             <div class="px-4 py-3 border-b border-amber-100 bg-amber-50/80">
               <div class="flex items-center justify-between gap-3 text-[11px]">
                 <div class="flex items-center gap-2 min-w-0">
@@ -796,7 +819,7 @@
       <!-- Log -->
       <div x-show="sideTab === 'log'" class="flex-1 overflow-y-auto p-4 space-y-3">
         <template x-if="selectedTimelineSummary()">
-          <section class="sticky top-0 z-10 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-sm">
+          <section class="sticky top-0 z-10 rounded-2xl border border-slate-200 bg-panel/95 backdrop-blur px-4 py-3 shadow-sm">
             <div class="space-y-2.5">
               <div class="space-y-1">
                 <div class="flex items-center justify-between gap-3 text-[11px]">
@@ -856,7 +879,7 @@
 
 <!-- New Project -->
 <div x-show="showNewProject" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showNewProject = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-4">New Project</h3>
     <div class="space-y-3">
       <input x-model="newProject.title" placeholder="Project title" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition placeholder:text-slate-300">
@@ -891,13 +914,13 @@
 
 <!-- Create Intent -->
 <div x-show="showIntentModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showIntentModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-1">New Intent</h3>
     <div class="mb-4">
       <label class="text-[11px] text-slate-400 mb-1 block font-medium">From facts</label>
       <div class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 min-h-[42px] flex flex-wrap gap-1.5 items-center">
         <template x-for="fid in selectedFacts" :key="`intent-from-${fid}`">
-          <span class="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600" x-text="fid"></span>
+          <span class="px-2 py-1 rounded-lg bg-panel border border-slate-200 text-[11px] font-mono text-slate-600" x-text="fid"></span>
         </template>
       </div>
     </div>
@@ -919,7 +942,7 @@
 
 <!-- Conclude -->
 <div x-show="showConcludeModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showConcludeModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-1">Conclude Intent</h3>
     <p class="text-xs text-slate-400 mb-4 font-mono" x-text="concludeForm.intentId"></p>
     <div class="space-y-3">
@@ -938,7 +961,7 @@
 
 <!-- Complete Project -->
 <div x-show="showCompleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showCompleteModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-1">Complete Project</h3>
     <p class="text-xs text-slate-400 mb-4">Mark project as completed</p>
     <div class="space-y-3">
@@ -946,7 +969,7 @@
         <label class="text-[11px] text-slate-400 mb-1 block font-medium">From facts</label>
         <div class="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 min-h-[42px] flex flex-wrap gap-1.5 items-center">
           <template x-for="fid in selectedFacts" :key="`complete-from-${fid}`">
-            <span class="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600" x-text="fid"></span>
+            <span class="px-2 py-1 rounded-lg bg-panel border border-slate-200 text-[11px] font-mono text-slate-600" x-text="fid"></span>
           </template>
         </div>
       </div>
@@ -965,7 +988,7 @@
 
 <!-- Hint -->
 <div x-show="showHintModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showHintModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-4">Add Hint</h3>
     <div class="space-y-3">
       <textarea x-model="hintForm.content" placeholder="Strategy advice or note..." rows="3" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition placeholder:text-slate-300"></textarea>
@@ -983,7 +1006,7 @@
 
 <!-- Reopen -->
 <div x-show="showReopenModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showReopenModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-1">Reopen Project</h3>
     <p class="text-xs text-slate-400 mb-4" x-text="projectLabel(reopenForm.projectId, reopenForm.projectTitle)"></p>
     <div class="space-y-3">
@@ -1002,7 +1025,7 @@
 
 <!-- Rename Project -->
 <div x-show="showRenameModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showRenameModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-1">Rename Project</h3>
     <p class="text-xs text-slate-400 mb-4" x-text="projectLabel(renameForm.projectId, renameForm.originalTitle)"></p>
     <div class="space-y-3">
@@ -1012,14 +1035,14 @@
     <div class="flex justify-end gap-2 mt-5">
       <button @click="showRenameModal = false" class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl transition">Cancel</button>
       <button @click="renameProject()" :disabled="!renameForm.projectId || !renameForm.title"
-        class="px-5 py-2 text-sm bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-900 transition disabled:opacity-30 shadow-sm">Save</button>
+        class="px-5 py-2 text-sm bg-btn text-white rounded-xl font-medium hover:bg-btn transition disabled:opacity-30 shadow-sm">Save</button>
     </div>
   </div>
 </div>
 
 <!-- Local Preferences -->
 <div x-show="showLocalPrefs" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showLocalPrefs = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-4">Local Preferences</h3>
     <div class="space-y-4">
       <div>
@@ -1028,7 +1051,7 @@
       </div>
       <div>
         <label class="text-[11px] text-slate-400 mb-1 block font-medium">Default layout</label>
-        <select x-model="localPrefs.layout_mode" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition">
+        <select x-model="localPrefs.layout_mode" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-panel focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400 transition">
           <option value="dagre_tb">Dagre ↓</option>
           <option value="dagre_lr">Dagre →</option>
           <option value="klay_tb">Klay ↓</option>
@@ -1041,14 +1064,14 @@
     </div>
     <div class="flex justify-end gap-2 mt-5">
       <button @click="showLocalPrefs = false" class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl transition">Close</button>
-      <button @click="saveLocalSettings()" class="px-4 py-2 text-sm bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-900 transition shadow-sm">Save Local</button>
+      <button @click="saveLocalSettings()" class="px-4 py-2 text-sm bg-btn text-white rounded-xl font-medium hover:bg-btn transition shadow-sm">Save Local</button>
     </div>
   </div>
 </div>
 
 <!-- Worker Config -->
 <div x-show="showCodexConfig" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showCodexConfig = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-slate-200/60" @click.stop>
     <div class="flex items-start gap-3 mb-4">
       <div class="h-10 w-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/><path d="m14.5 4-5 16"/></svg>
@@ -1063,12 +1086,12 @@
         <label class="text-[11px] text-slate-400 mb-1 block font-medium">Provider</label>
         <div class="grid grid-cols-2 gap-2">
           <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer flex items-center justify-center gap-2"
-            :class="workerConfig.provider === 'codex' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            :class="workerConfig.provider === 'codex' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-panel text-slate-500 hover:bg-slate-50'">
             <input type="radio" value="codex" x-model="workerConfig.provider" @change="applyWorkerProviderDefaults()" class="sr-only">
             <span>Codex</span>
           </label>
           <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer flex items-center justify-center gap-2"
-            :class="workerConfig.provider === 'claudecode' ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            :class="workerConfig.provider === 'claudecode' ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-panel text-slate-500 hover:bg-slate-50'">
             <input type="radio" value="claudecode" x-model="workerConfig.provider" @change="applyWorkerProviderDefaults()" class="sr-only">
             <span>Claude Code</span>
           </label>
@@ -1085,13 +1108,13 @@
         <label class="text-[11px] text-slate-400 mb-1 block font-medium">Authentication</label>
         <div class="grid grid-cols-2 gap-2">
           <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer"
-            :class="workerConfig.auth_mode === 'local' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            :class="workerConfig.auth_mode === 'local' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-panel text-slate-500 hover:bg-slate-50'">
             <input type="radio" value="local" x-model="workerConfig.auth_mode" @change="applyWorkerAuthDefaults()" class="sr-only">
             <span class="block">Local login</span>
             <span class="block text-[11px] font-normal opacity-70 mt-0.5">Use this machine's Codex session</span>
           </label>
           <label class="px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer"
-            :class="workerConfig.auth_mode === 'api_key' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'">
+            :class="workerConfig.auth_mode === 'api_key' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-panel text-slate-500 hover:bg-slate-50'">
             <input type="radio" value="api_key" x-model="workerConfig.auth_mode" @change="applyWorkerAuthDefaults()" class="sr-only">
             <span class="block">API key</span>
             <span class="block text-[11px] font-normal opacity-70 mt-0.5">Use a custom OpenAI endpoint</span>
@@ -1130,13 +1153,13 @@
                 <button
                   @click="setWorkerModelDefault(model)"
                   :disabled="workerModelCatalogForCurrentProvider().default === model"
-                  class="text-xs px-2 py-1 rounded-lg border border-emerald-100 bg-white text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="text-xs px-2 py-1 rounded-lg border border-emerald-100 bg-panel text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span x-text="workerModelCatalogForCurrentProvider().default === model ? 'Default' : 'Set default'"></span>
                 </button>
                 <button
                   @click="removeWorkerModel(model)"
-                  class="text-xs px-2 py-1 rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 transition"
+                  class="text-xs px-2 py-1 rounded-lg border border-rose-100 bg-panel text-rose-600 hover:bg-rose-50 transition"
                 >Delete</button>
               </span>
             </div>
@@ -1163,11 +1186,11 @@
           <h4 class="text-sm font-semibold text-slate-700">Ping test</h4>
           <p class="text-xs text-slate-400 mt-1" x-text="codexUsesLocalAuth() ? 'Checks the local codex CLI on this machine.' : 'Sends a minimal request to the selected provider API.'"></p>
         </div>
-        <button @click="pingWorkerConfig()" :disabled="isPingingWorkerConfig" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50 transition disabled:opacity-40">
+        <button @click="pingWorkerConfig()" :disabled="isPingingWorkerConfig" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-panel text-xs text-slate-600 hover:bg-slate-50 transition disabled:opacity-40">
           <span x-text="isPingingWorkerConfig ? 'Pinging...' : 'Send Ping'"></span>
         </button>
       </div>
-      <pre x-show="workerPingResult" class="mt-3 max-h-32 overflow-auto rounded-xl border border-slate-200 bg-white p-3 text-[11px] leading-5 text-slate-700"><code x-text="workerPingResult"></code></pre>
+      <pre x-show="workerPingResult" class="mt-3 max-h-32 overflow-auto rounded-xl border border-slate-200 bg-panel p-3 text-[11px] leading-5 text-slate-700"><code x-text="workerPingResult"></code></pre>
     </div>
     <div class="flex justify-end gap-2 mt-5">
       <button @click="showCodexConfig = false" class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl transition">Close</button>
@@ -1181,7 +1204,7 @@
 
 <!-- Settings -->
 <div x-show="showSettings" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showSettings = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200/60" @click.stop>
     <h3 class="text-base font-semibold text-slate-700 mb-4">Server Settings</h3>
     <div>
       <label class="text-[11px] text-slate-400 mb-1 block font-medium">Intent timeout (seconds)</label>
@@ -1201,7 +1224,7 @@
 
 <!-- Export Preview -->
 <div x-show="showYamlModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="showYamlModal = false">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 border border-slate-200/60 overflow-hidden" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-4xl mx-4 border border-slate-200/60 overflow-hidden" @click.stop>
     <div class="px-5 py-4 border-b border-slate-200/80 flex items-center justify-between gap-4">
       <div class="min-w-0 flex items-center gap-3">
         <div class="flex rounded-lg border border-slate-200 overflow-hidden shrink-0">
@@ -1218,7 +1241,7 @@
       </div>
     </div>
     <div class="max-h-[75vh] overflow-auto bg-slate-50 p-4">
-      <div class="rounded-xl border border-slate-200 bg-white overflow-auto shadow-sm">
+      <div class="rounded-xl border border-slate-200 bg-panel overflow-auto shadow-sm">
         <div class="min-w-max p-0 text-[12px] leading-6 font-mono select-text" x-html="yamlPreviewHtml"></div>
       </div>
     </div>
@@ -1227,7 +1250,7 @@
 
 <!-- Delete Project -->
 <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overlay" @click.self="closeDeleteModal()">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200/60" @click.stop>
+  <div class="bg-panel rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200/60" @click.stop>
     <div class="flex items-start gap-3">
       <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6"/><path d="M19 6l-.63 11.338A2 2 0 0 1 16.37 19.5H7.63a2 2 0 0 1-1.997-2.162L5 6"/><path d="M10 10.5v5"/><path d="M14 10.5v5"/></svg>
@@ -1259,7 +1282,7 @@
   x-transition:leave-start="opacity-100"
   x-transition:leave-end="opacity-0 translate-y-2"
   class="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium"
-  :class="toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-slate-800 text-white'">
+  :class="toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-btn text-white'">
   <span x-text="toast.message"></span>
 </div>
 
@@ -2734,14 +2757,14 @@ function cairnApp() {
         { selector: 'node[nodeType="fact"]', style: { ...common, shape:'round-rectangle','background-color':'#6366f1',label:'data(label)',color:'#fff','font-size':'10px','font-weight':'bold','text-wrap':'wrap','text-max-width':'116px','text-overflow-wrap':'anywhere',width:'data(width)',height:'data(height)','border-width':0 }},
         { selector: 'node[nodeType="in_progress"]', style: { ...common, shape:'ellipse','background-color':'#f59e0b','background-opacity':0.8,label:'?',color:'#fff','font-size':'11px','font-weight':'bold',width:22,height:22,'border-width':2,'border-color':'#d97706' }},
         { selector: 'node[nodeType="unclaimed"]', style: { ...common, shape:'ellipse','background-color':'#cbd5e1','background-opacity':0.5,label:'?',color:'#94a3b8','font-size':'11px','font-weight':'bold',width:20,height:20,'border-width':1.5,'border-color':'#94a3b8','border-style':'dashed' }},
-        { selector: 'node[nodeType="bootstrap_pending"]', style: { ...common, shape:'round-rectangle','background-color':'#fff7ed','background-opacity':0.96,label:'data(label)',color:'#c2410c','font-size':'10px','font-weight':'bold',width:'data(width)',height:'data(height)','border-width':1.5,'border-color':'#fdba74','border-style':'dashed','text-wrap':'wrap','text-max-width':'70px' }},
+        { selector: 'node[nodeType="bootstrap_pending"]', style: { ...common, shape:'round-rectangle','background-color':'#231508','background-opacity':0.96,label:'data(label)',color:'#fdba74','font-size':'10px','font-weight':'bold',width:'data(width)',height:'data(height)','border-width':1.5,'border-color':'#b45309','border-style':'dashed','text-wrap':'wrap','text-max-width':'70px' }},
         { selector: 'node[nodeType="bootstrap_running"]', style: { ...common, shape:'round-rectangle','background-color':'#fb923c','background-opacity':0.96,label:'data(label)',color:'#fff7ed','font-size':'10px','font-weight':'bold',width:'data(width)',height:'data(height)','border-width':2,'border-color':'#ea580c','text-wrap':'wrap','text-max-width':'70px' }},
 
-        { selector: 'edge[status="concluded"]', style: { width:2,'line-color':'#6ee7b7','target-arrow-color':'#6ee7b7','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#94a3b8','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#f8fafc','text-background-opacity':0.85,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.9 }},
-        { selector: 'edge[status="in_progress"]', style: { width:2,'line-color':'#fbbf24','line-style':'dashed','line-dash-pattern':[8,4],'line-dash-offset':0,'target-arrow-color':'#fbbf24','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#b45309','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#fffbeb','text-background-opacity':0.85,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.9 }},
-        { selector: 'edge[status="unclaimed"]', style: { width:1.5,'line-color':'#cbd5e1','line-style':'dashed','line-dash-pattern':[5,5],'target-arrow-color':'#cbd5e1','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#94a3b8','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#f8fafc','text-background-opacity':0.85,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.7 }},
-        { selector: 'edge[status="bootstrap_pending"]', style: { width:2,'line-color':'#fdba74','line-style':'dashed','line-dash-pattern':[8,4],'line-dash-offset':0,'target-arrow-color':'#fdba74','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#c2410c','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'88px','text-wrap':'ellipsis','text-background-color':'#fff7ed','text-background-opacity':0.92,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.85 }},
-        { selector: 'edge[status="bootstrap_running"]', style: { width:2.5,'line-color':'#fb923c','line-style':'dashed','line-dash-pattern':[10,4],'line-dash-offset':0,'target-arrow-color':'#fb923c','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#c2410c','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'88px','text-wrap':'ellipsis','text-background-color':'#fff7ed','text-background-opacity':0.92,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.95 }},
+        { selector: 'edge[status="concluded"]', style: { width:2,'line-color':'#34d399','target-arrow-color':'#34d399','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#aeb9c9','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#0f1725','text-background-opacity':0.9,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.9 }},
+        { selector: 'edge[status="in_progress"]', style: { width:2,'line-color':'#fbbf24','line-style':'dashed','line-dash-pattern':[8,4],'line-dash-offset':0,'target-arrow-color':'#fbbf24','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#fbbf24','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#221a0b','text-background-opacity':0.9,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.9 }},
+        { selector: 'edge[status="unclaimed"]', style: { width:1.5,'line-color':'#64748b','line-style':'dashed','line-dash-pattern':[5,5],'target-arrow-color':'#64748b','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#94a3b8','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'80px','text-wrap':'ellipsis','text-background-color':'#0f1725','text-background-opacity':0.9,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.7 }},
+        { selector: 'edge[status="bootstrap_pending"]', style: { width:2,'line-color':'#fdba74','line-style':'dashed','line-dash-pattern':[8,4],'line-dash-offset':0,'target-arrow-color':'#fdba74','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#fdba74','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'88px','text-wrap':'ellipsis','text-background-color':'#231508','text-background-opacity':0.92,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.85 }},
+        { selector: 'edge[status="bootstrap_running"]', style: { width:2.5,'line-color':'#fb923c','line-style':'dashed','line-dash-pattern':[10,4],'line-dash-offset':0,'target-arrow-color':'#fb923c','target-arrow-shape':'triangle','curve-style':'bezier',label:'data(label)','font-size':'7px',color:'#fdba74','text-rotation':'autorotate','text-margin-y':-9,'text-max-width':'88px','text-wrap':'ellipsis','text-background-color':'#231508','text-background-opacity':0.92,'text-background-padding':'2px','text-events':'yes','arrow-scale':0.95 }},
         { selector: 'edge[edgeType="bootstrap_scope"]', style: { label:'',width:1.8,'curve-style':'bezier','line-style':'dotted','line-dash-pattern':[2,5],'target-arrow-shape':'triangle-backcurve','arrow-scale':0.75,'target-distance-from-node':2 }},
 
         { selector: '.highlight', style: { 'z-index':999 }},

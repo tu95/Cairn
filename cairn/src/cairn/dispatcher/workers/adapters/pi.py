@@ -6,6 +6,7 @@ from typing import Any
 
 from cairn.dispatcher.config import WorkerConfig
 from cairn.dispatcher.workers.base import DriverResult, WorkerDriver
+from cairn.workspace import workspace_path
 
 
 class PiDriver(WorkerDriver):
@@ -141,7 +142,7 @@ class PiDriver(WorkerDriver):
 
     @staticmethod
     def _agent_dir(worker: WorkerConfig) -> str:
-        return str(PurePosixPath("/tmp/cairn-pi") / worker.name)
+        return str(workspace_path("pi") / worker.name)
 
     @staticmethod
     def _session_dir(worker: WorkerConfig) -> str:

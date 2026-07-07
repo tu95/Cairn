@@ -152,8 +152,9 @@ This starts the Web/API server on `0.0.0.0:8000`, waits for it to become healthy
 
 Storage locations used at runtime:
 - Worker config: `dispatch.yaml` (and model catalog: `dispatch.models.yaml` next to it).
-- SQLite DB: `~/.local/share/cairn/cairn.db`.
-- Prompt snapshots referenced by workers: `/tmp/cairn-prompts/<phase>-<random>/graph.yaml` (override with `CAIRN_GRAPH_SNAPSHOT_ROOT` env var).
+- Runtime artifacts are consolidated under `./workspace/` (git-ignored). Override the location with the `CAIRN_WORKSPACE` env var.
+  - SQLite DB: `workspace/cairn.db`.
+  - Prompt snapshots referenced by workers: `workspace/prompts/<phase>-<random>/graph.yaml` (override with `CAIRN_GRAPH_SNAPSHOT_ROOT` env var).
 
 The Web UI can edit worker API settings, and runtime config changes are hot-reloaded: the dispatcher reloads after current tasks finish when config is updated.
 Model names are now managed from the same UI (save/delete/set default), persisted in `dispatch.models.yaml` next to `dispatch.yaml` by default.
