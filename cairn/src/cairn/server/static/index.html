@@ -1121,46 +1121,35 @@
           </label>
         </div>
       </div>
-      <div>
-        <label class="text-[11px] text-slate-400 mb-1 block font-medium" x-text="codexUsesLocalAuth() ? 'Model (optional)' : 'Model'"></label>
-        <div class="flex gap-2">
-          <input
-            x-model="workerConfig.model"
-            :placeholder="(workerConfig.default_model || 'gpt-5.1-codex') + (codexUsesLocalAuth() ? ' (optional)' : '')"
-            list="worker-model-options"
-            class="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition placeholder:text-slate-300"
-          >
-          <datalist id="worker-model-options">
-            <template x-for="item in workerConfig.available_models" :key="item">
-              <option :value="item"></option>
-            </template>
-          </datalist>
-        </div>
-        <p class="mt-1 text-[11px] text-slate-400">
-          Default: <span x-text="workerConfig.default_model || '—'"></span>
-        </p>
-      </div>
       <div class="md:col-span-2">
-        <label class="text-[11px] text-slate-400 mb-1 block font-medium">Saved models</label>
-        <div class="rounded-xl border border-slate-200 bg-slate-50">
+        <label class="text-[11px] text-slate-400 mb-1 block font-medium" x-text="codexUsesLocalAuth() ? 'Model (optional)' : 'Model'"></label>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+          <template x-if="codexUsesLocalAuth()">
+            <button type="button" @click="selectWorkerModel('')"
+              class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition"
+              :class="!workerConfig.model ? 'bg-emerald-50/70' : 'hover:bg-slate-100/70'">
+              <span class="text-sm" :class="!workerConfig.model ? 'text-emerald-700 font-medium' : 'text-slate-500'">CLI default (no model)</span>
+              <span x-show="!workerConfig.model" class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold uppercase tracking-wide shrink-0">Selected</span>
+            </button>
+          </template>
+          <template x-if="workerConfig.model && !workerModelCatalogForCurrentProvider().items.includes(workerConfig.model)">
+            <div class="flex items-center justify-between gap-2 border-t border-slate-200 px-3 py-2 bg-emerald-50/70">
+              <span class="text-sm text-emerald-700 font-medium truncate" x-text="workerConfig.model"></span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold uppercase tracking-wide shrink-0">Selected</span>
+            </div>
+          </template>
           <template x-if="workerModelCatalogForCurrentProvider().items.length === 0">
-            <p class="text-xs text-slate-400 px-3 py-2">No models yet.</p>
+            <p class="text-xs text-slate-400 px-3 py-2 border-t border-slate-200">No models yet. Add one below.</p>
           </template>
           <template x-for="model in workerModelCatalogForCurrentProvider().items" :key="model">
-            <div class="grid grid-cols-3 gap-2 border-t border-slate-200 px-3 py-2">
-              <span class="col-span-2 text-sm text-slate-700 truncate" x-text="model"></span>
-              <span class="flex items-center justify-end gap-2">
-                <button
-                  @click="setWorkerModelDefault(model)"
-                  :disabled="workerModelCatalogForCurrentProvider().default === model"
-                  class="text-xs px-2 py-1 rounded-lg border border-emerald-100 bg-panel text-emerald-600 hover:bg-emerald-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <span x-text="workerModelCatalogForCurrentProvider().default === model ? 'Default' : 'Set default'"></span>
-                </button>
-                <button
-                  @click="removeWorkerModel(model)"
-                  class="text-xs px-2 py-1 rounded-lg border border-rose-100 bg-panel text-rose-600 hover:bg-rose-50 transition"
-                >Delete</button>
+            <div @click="selectWorkerModel(model)"
+              class="flex items-center justify-between gap-2 border-t border-slate-200 px-3 py-2 cursor-pointer transition"
+              :class="workerConfig.model === model ? 'bg-emerald-50/70' : 'hover:bg-slate-100/70'">
+              <span class="text-sm truncate" :class="workerConfig.model === model ? 'text-emerald-700 font-medium' : 'text-slate-700'" x-text="model"></span>
+              <span class="flex items-center gap-2 shrink-0">
+                <span x-show="workerConfig.model === model" class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold uppercase tracking-wide">Selected</span>
+                <button @click.stop="removeWorkerModel(model)"
+                  class="text-xs px-2 py-1 rounded-lg border border-rose-100 bg-panel text-rose-600 hover:bg-rose-50 transition">Delete</button>
               </span>
             </div>
           </template>
@@ -1169,6 +1158,7 @@
             <button @click="addWorkerModel()" class="px-3 py-2 text-xs rounded-lg border border-emerald-100 bg-emerald-600 text-white hover:bg-emerald-700 transition">Add</button>
           </div>
         </div>
+        <p class="mt-1 text-[11px] text-slate-400">Click a model to use it for this worker, then Save Worker to apply.</p>
       </div>
       <div x-show="workerNeedsApiCredentials()" x-cloak>
         <label class="text-[11px] text-slate-400 mb-1 block font-medium">Base URL</label>
@@ -1761,9 +1751,6 @@ function cairnApp() {
         if (!this.workerConfig.model || this.workerConfig.model.startsWith('claude-')) {
           this.workerConfig.model = this.workerConfig.auth_mode === 'api_key' ? 'gpt-5.1-codex' : '';
         }
-        if (!this.workerConfig.model && this.workerConfig.default_model) {
-          this.workerConfig.model = this.workerConfig.default_model;
-        }
         if (this.workerConfig.auth_mode === 'api_key' && (!this.workerConfig.base_url || this.workerConfig.base_url.includes('anthropic.com'))) {
           this.workerConfig.base_url = 'https://api.openai.com/v1';
         }
@@ -1853,9 +1840,6 @@ function cairnApp() {
       if (provider === this.workerConfig.provider) {
         this.workerConfig.available_models = data.items || [];
         this.workerConfig.default_model = data.default || '';
-        if (!this.workerConfig.model && this.workerConfig.default_model) {
-          this.workerConfig.model = this.workerConfig.default_model;
-        }
       }
     },
 
@@ -1883,19 +1867,20 @@ function cairnApp() {
         return;
       }
       current.items = [...current.items, model];
-      if (!current.default) {
-        current.default = model;
-      }
+      // 新增即选中：列表里的高亮项就是 worker 实际使用的模型
+      current.default = model;
+      this.workerConfig.model = model;
       this.workerModelInput = '';
       await this.saveWorkerModels();
     },
 
-    async setWorkerModelDefault(model) {
+    async selectWorkerModel(model) {
+      this.workerConfig.model = model;
       const current = this.workerModelCatalogForCurrentProvider();
-      current.default = model;
-      await this.saveWorkerModels();
-      if (this.workerConfig.provider === 'codex' && this.workerConfig.auth_mode === 'local' && !this.workerConfig.model) {
-        this.workerConfig.model = model;
+      // catalog 的 default 字段仅作为选中记忆持久化，不再有独立的“默认”语义
+      if (model && current.default !== model) {
+        current.default = model;
+        await this.saveWorkerModels();
       }
     },
 

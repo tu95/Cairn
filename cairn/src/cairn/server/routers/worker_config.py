@@ -124,10 +124,9 @@ def get_worker_config():
         auth_mode = env.get("CODEX_AUTH_MODE")
         if auth_mode not in ("local", "api_key"):
             auth_mode = "api_key" if env.get("OPENAI_API_KEY") else "local"
+        # local 模式下不回填目录默认值：model 为空就是“跟随 CLI 默认”，UI 按选中语义如实展示
         model = env.get("CODEX_MODEL", "")
-        if auth_mode == "local" and not model:
-            model = default_model or ""
-        elif auth_mode == "api_key" and not model:
+        if auth_mode == "api_key" and not model:
             model = "gpt-5.1-codex"
         base_url = env.get("CODEX_BASE_URL", "https://api.openai.com/v1" if auth_mode == "api_key" else "")
         has_secret = bool(env.get("OPENAI_API_KEY"))
