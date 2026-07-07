@@ -1,7 +1,8 @@
 codex:
   items:
   - gpt-5.3-codex-spark
-  default: gpt-5.3-codex-spark
+  - gpt-5.5
+  default: gpt-5.5
 claudecode:
   items:
   - claude-sonnet-4-5
